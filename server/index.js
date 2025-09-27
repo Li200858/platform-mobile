@@ -305,7 +305,7 @@ app.post('/api/upload', upload.array('files', 10), (req, res) => {
 app.post('/api/art', async (req, res) => {
   const { tab, title, content, media, authorName, authorClass, allowDownload } = req.body;
   
-  if (!tab || !title || !content || !authorName || !authorClass) {
+  if (!title || !content || !authorName || !authorClass) {
     return res.status(400).json({ error: '请填写完整信息' });
   }
   
