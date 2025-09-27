@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://platform-mobile.onrender.com/api' // Use the new mobile backend URL
+  ? 'https://platform-mobile-backend.onrender.com/api'
   : 'http://localhost:5000/api';
 
 const api = {
