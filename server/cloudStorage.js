@@ -35,3 +35,4 @@ const deleteFromS3 = async (filename) => {
 };
 
 module.exports = { uploadToS3, deleteFromS3 };
+

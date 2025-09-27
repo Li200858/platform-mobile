@@ -12,6 +12,8 @@ export default function UserSync({ onBack, isMobile = false }) {
     name: '',
     class: ''
   });
+  const [nameEdited, setNameEdited] = useState(false);
+  const [nameLocked, setNameLocked] = useState(false);
 
   const mobileStyles = {
     container: {
@@ -52,6 +54,8 @@ export default function UserSync({ onBack, isMobile = false }) {
   const loadLocalUserInfo = () => {
     try {
       const savedUserInfo = localStorage.getItem('user_profile');
+      const nameEditedFlag = localStorage.getItem('name_edited');
+      
       if (savedUserInfo) {
         const parsedInfo = JSON.parse(savedUserInfo);
         setUserInfo(parsedInfo);
@@ -59,6 +63,12 @@ export default function UserSync({ onBack, isMobile = false }) {
           name: parsedInfo.name || '',
           class: parsedInfo.class || ''
         });
+        
+        // 检查姓名是否已经编辑过
+        if (nameEditedFlag === 'true' || (parsedInfo.name && parsedInfo.name !== '用户')) {
+          setNameEdited(true);
+          setNameLocked(true);
+        }
       }
     } catch (error) {
       console.error('加载本地用户信息失败:', error);
@@ -108,8 +118,11 @@ export default function UserSync({ onBack, isMobile = false }) {
         };
 
         localStorage.setItem('user_profile', JSON.stringify(updatedInfo));
+        localStorage.setItem('name_edited', 'true'); // 标记姓名已编辑
         setUserInfo(updatedInfo);
-        setMessage('数据同步成功！');
+        setNameEdited(true);
+        setNameLocked(true);
+        setMessage('数据同步成功！姓名已锁定，无法再次修改。');
       }
     } catch (error) {
       console.error('同步失败:', error);
@@ -402,23 +415,44 @@ export default function UserSync({ onBack, isMobile = false }) {
               color: '#2c3e50',
               fontSize: isMobile ? '16px' : '14px'
             }}>
-              姓名 *
+              姓名 * {nameLocked && <span style={{ color: '#e74c3c', fontSize: '12px' }}>(已锁定)</span>}
             </label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="请输入您的真实姓名"
+              onChange={(e) => !nameLocked && setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder={nameLocked ? "姓名已锁定，无法修改" : "请输入您的真实姓名"}
+              disabled={nameLocked}
               style={{
                 width: '100%',
                 padding: isMobile ? '14px' : '12px',
-                border: '2px solid #e9ecef',
+                border: nameLocked ? '2px solid #e74c3c' : '2px solid #e9ecef',
                 borderRadius: '8px',
                 fontSize: isMobile ? '16px' : '14px',
                 boxSizing: 'border-box',
-                transition: 'border-color 0.3s ease'
+                transition: 'border-color 0.3s ease',
+                backgroundColor: nameLocked ? '#f8f9fa' : 'white',
+                color: nameLocked ? '#6c757d' : '#2c3e50',
+                cursor: nameLocked ? 'not-allowed' : 'text'
               }}
             />
+            {nameLocked && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '6px',
+                color: '#856404',
+                fontSize: isMobile ? '14px' : '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span>⚠️</span>
+                <span>姓名已设置并锁定，无法再次修改。如需修改请联系管理员。</span>
+              </div>
+            )}
           </div>
 
           <div style={{ marginBottom: '20px' }}>
@@ -460,14 +494,14 @@ export default function UserSync({ onBack, isMobile = false }) {
           }}>
             <button
               onClick={handleSync}
-              disabled={loading || !userID}
+              disabled={loading || !userID || nameLocked}
               style={{
                 ...mobileStyles.syncButton,
-                opacity: (loading || !userID) ? 0.6 : 1,
-                cursor: (loading || !userID) ? 'not-allowed' : 'pointer'
+                opacity: (loading || !userID || nameLocked) ? 0.6 : 1,
+                cursor: (loading || !userID || nameLocked) ? 'not-allowed' : 'pointer'
               }}
             >
-              {loading ? '同步中...' : '同步到服务器'}
+              {loading ? '同步中...' : nameLocked ? '姓名已锁定' : '同步到服务器'}
             </button>
             
             <button

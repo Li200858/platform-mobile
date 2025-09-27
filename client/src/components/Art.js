@@ -192,7 +192,9 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
       const dbTab = currentTab ? currentTab.dbValue : '';
       const sortParam = sort === 'hot' ? 'hot' : 'time';
       
+      console.log('加载艺术作品:', { tab, dbTab, sort, sortParam });
       const data = await api.art.getAll(dbTab, sortParam);
+      console.log('获取到的艺术作品数据:', data);
       setList(data);
     } catch (error) {
       console.error('加载艺术作品失败:', error);
@@ -1176,11 +1178,19 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                         media: publishForm.media || []
                       };
                       
-                      await api.art.publish(artData);
+                      console.log('发布作品数据:', artData);
+                      const result = await api.art.publish(artData);
+                      console.log('发布结果:', result);
+                      
                       setMessage('发布成功');
                       setShowPublish(false);
                       clearDraft(); // 清除草稿
-                      await loadArts();
+                      
+                      // 延迟一下再重新加载，确保数据已经保存
+                      setTimeout(async () => {
+                        console.log('重新加载艺术作品列表...');
+                        await loadArts();
+                      }, 500);
                     } catch (error) {
                       console.error('发布失败:', error);
                       setMessage('发布失败，请重试');

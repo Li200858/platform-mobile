@@ -305,13 +305,15 @@ app.post('/api/upload', upload.array('files', 10), (req, res) => {
 app.post('/api/art', async (req, res) => {
   const { tab, title, content, media, authorName, authorClass, allowDownload } = req.body;
   
-  if (!tab || !title || !content || !authorName || !authorClass) {
+  console.log('收到艺术作品发布请求:', { tab, title, content, authorName, authorClass, allowDownload });
+  
+  if (!title || !content || !authorName || !authorClass) {
     return res.status(400).json({ error: '请填写完整信息' });
   }
   
   try {
     const post = await Art.create({
-      tab,
+      tab: tab || '全部',
       title,
       content,
       author: authorName,
@@ -324,6 +326,7 @@ app.post('/api/art', async (req, res) => {
       favorites: []
     });
     
+    console.log('艺术作品创建成功:', post._id);
     res.json(post);
   } catch (error) {
     console.error('发布失败:', error);
@@ -333,7 +336,9 @@ app.post('/api/art', async (req, res) => {
 
 app.get('/api/art', async (req, res) => {
   const { tab, sort } = req.query;
-  const filter = tab ? { tab } : {};
+  console.log('获取艺术作品请求:', { tab, sort });
+  
+  const filter = tab && tab !== '' ? { tab } : {};
   let query = Art.find(filter);
   
   if (sort === 'hot') {
@@ -343,6 +348,7 @@ app.get('/api/art', async (req, res) => {
   }
   
   const posts = await query;
+  console.log(`获取到 ${posts.length} 个艺术作品`);
   res.json(posts);
 });
 
@@ -1234,31 +1240,17 @@ app.post('/api/user/sync', async (req, res) => {
         isAdmin: false
       });
     } else {
-      // 如果找到用户，检查姓名是否被其他用户使用
+      // 如果找到用户，检查是否尝试修改姓名
       if (name && name !== '用户' && name !== user.name) {
-        const existingUser = await User.findOne({ name });
-        if (existingUser && existingUser.userID !== userID) {
-          return res.status(400).json({ 
-            error: '该姓名已被其他用户注册，请使用其他姓名',
-            code: 'NAME_TAKEN'
-          });
-        }
+        // 姓名一旦设置就不能更改
+        return res.status(400).json({ 
+          error: '姓名已设置，无法修改。如需修改请联系管理员。',
+          code: 'NAME_LOCKED'
+        });
       }
       
       // 更新用户信息（保持绑定关系）
-      // 姓名一旦设置就不能更改，只能更新班级和头像
-      if (name && name !== '用户' && name !== user.name) {
-        // 如果尝试修改姓名，检查是否被其他用户使用
-        const existingUser = await User.findOne({ name });
-        if (existingUser && existingUser.userID !== userID) {
-          return res.status(400).json({ 
-            error: '该姓名已被其他用户注册，请使用其他姓名',
-            code: 'NAME_TAKEN'
-          });
-        }
-        // 如果姓名可用，允许修改
-        user.name = name;
-      }
+      // 只能更新班级和头像，不能修改姓名
       if (userClass && userClass !== '未知班级') user.class = userClass;
       if (avatar) user.avatar = avatar;
       await user.save();
