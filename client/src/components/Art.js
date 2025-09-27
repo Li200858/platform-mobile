@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Avatar from './Avatar';
 import FilePreview from './FilePreview';
 import api from '../api';
 import { MOBILE_CONFIG } from '../config';
