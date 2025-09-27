@@ -18,6 +18,8 @@ services:
           property: connectionString
       - key: ALLOWED_ORIGINS
         value: https://platform-mobile.onrender.com,https://platform-mobile-frontend.onrender.com,https://hwartplatform.org,https://www.hwartplatform.org,https://mobile.hwartplatform.org,https://ipad.hwartplatform.org
+      - key: SHARED_UPLOAD_DIR
+        value: /opt/render/project/src/uploads
 
   # 前端服务
   - type: web
