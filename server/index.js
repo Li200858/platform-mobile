@@ -312,7 +312,7 @@ app.post('/api/art', async (req, res) => {
   }
   
   try {
-    const post = await Art.create({
+    const artData = {
       tab: tab || '全部',
       title,
       content,
@@ -324,13 +324,20 @@ app.post('/api/art', async (req, res) => {
       likes: 0,
       likedUsers: [],
       favorites: []
-    });
+    };
     
-    console.log('艺术作品创建成功:', post._id);
+    console.log('创建艺术作品数据:', artData);
+    const post = await Art.create(artData);
+    console.log('艺术作品创建成功:', post._id, post.title);
+    
+    // 验证数据是否真的保存了
+    const savedPost = await Art.findById(post._id);
+    console.log('验证保存的数据:', savedPost ? '成功' : '失败');
+    
     res.json(post);
   } catch (error) {
     console.error('发布失败:', error);
-    res.status(500).json({ error: '发布失败' });
+    res.status(500).json({ error: '发布失败: ' + error.message });
   }
 });
 
@@ -1219,7 +1226,7 @@ app.post('/api/user/sync', async (req, res) => {
     let user = await User.findOne({ userID });
     
     if (!user) {
-      // 如果没有找到用户，检查姓名是否已被使用
+      // 如果没有找到用户，强制检查姓名唯一性
       if (name && name !== '用户') {
         const existingUser = await User.findOne({ name });
         if (existingUser) {
@@ -1230,18 +1237,37 @@ app.post('/api/user/sync', async (req, res) => {
         }
       }
       
-      // 创建新用户
-      user = await User.create({
-        userID,
-        name: name || '用户',
-        class: userClass || '未知班级',
-        avatar: avatar || '',
-        role: 'user',
-        isAdmin: false
-      });
+      // 创建新用户，使用try-catch处理唯一性约束
+      try {
+        user = await User.create({
+          userID,
+          name: name || '用户',
+          class: userClass || '未知班级',
+          avatar: avatar || '',
+          role: 'user',
+          isAdmin: false
+        });
+      } catch (createError) {
+        if (createError.code === 11000) {
+          return res.status(400).json({ 
+            error: '该姓名已被注册，请使用其他姓名',
+            code: 'NAME_TAKEN'
+          });
+        }
+        throw createError;
+      }
     } else {
       // 如果找到用户，检查是否尝试修改姓名
       if (name && name !== '用户' && name !== user.name) {
+        // 检查新姓名是否已被其他用户使用
+        const existingUser = await User.findOne({ name, _id: { $ne: user._id } });
+        if (existingUser) {
+          return res.status(400).json({ 
+            error: '该姓名已被其他用户使用，请使用其他姓名',
+            code: 'NAME_TAKEN'
+          });
+        }
+        
         // 姓名一旦设置就不能更改
         return res.status(400).json({ 
           error: '姓名已设置，无法修改。如需修改请联系管理员。',

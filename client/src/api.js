@@ -56,7 +56,7 @@ const api = {
       });
       return response.json();
     },
-    getAll: async (tab = '', sort = 'latest') => {
+    getAll: async (tab = '', sort = 'time') => {
       const response = await fetch(`${API_BASE_URL}/art?tab=${tab}&sort=${sort}`);
       return response.json();
     },

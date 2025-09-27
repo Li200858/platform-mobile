@@ -195,10 +195,18 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
       console.log('加载艺术作品:', { tab, dbTab, sort, sortParam });
       const data = await api.art.getAll(dbTab, sortParam);
       console.log('获取到的艺术作品数据:', data);
-      setList(data);
+      
+      // 确保数据是数组
+      if (Array.isArray(data)) {
+        setList(data);
+      } else {
+        console.error('API返回的数据不是数组:', data);
+        setList([]);
+      }
     } catch (error) {
       console.error('加载艺术作品失败:', error);
       setMessage('加载失败，请重试');
+      setList([]);
     } finally {
       setLoading(false);
     }
@@ -1186,11 +1194,9 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                       setShowPublish(false);
                       clearDraft(); // 清除草稿
                       
-                      // 延迟一下再重新加载，确保数据已经保存
-                      setTimeout(async () => {
-                        console.log('重新加载艺术作品列表...');
-                        await loadArts();
-                      }, 500);
+                      // 立即重新加载列表
+                      console.log('重新加载艺术作品列表...');
+                      await loadArts();
                     } catch (error) {
                       console.error('发布失败:', error);
                       setMessage('发布失败，请重试');
