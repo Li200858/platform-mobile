@@ -329,7 +329,19 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
     try {
       const data = await api.upload(uploadFormData);
       if (data && data.urls && data.urls.length > 0) {
-        setPublishForm(prev => ({ ...prev, media: [...(prev.media || []), ...data.urls] }));
+        // 将URL转换为FilePreview组件期望的格式
+        const fileObjects = data.urls.map((url, index) => {
+          const originalFile = files[index];
+          return {
+            url: url,
+            filename: originalFile.name,
+            name: originalFile.name,
+            originalName: originalFile.name,
+            size: originalFile.size,
+            type: originalFile.type
+          };
+        });
+        setPublishForm(prev => ({ ...prev, media: [...(prev.media || []), ...fileObjects] }));
         setMessage(`成功上传 ${data.urls.length} 个文件`);
       } else {
         setMessage('文件上传失败，请重试');
@@ -690,14 +702,28 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                 gap: '10px',
                 marginTop: '15px'
               }}>
-                {art.media.map((media, index) => (
-                  <FilePreview
-                    key={index}
-                    file={media}
-                    allowDownload={art.allowDownload}
-                    isMobile={isMobile}
-                  />
-                ))}
+                {art.media.map((media, index) => {
+                  // 确保media对象有正确的格式
+                  const fileObject = typeof media === 'string' 
+                    ? { url: media, filename: media.split('/').pop(), name: media.split('/').pop() }
+                    : { 
+                        url: media.url || media,
+                        filename: media.filename || media.name || media.split('/').pop(),
+                        name: media.name || media.filename || media.split('/').pop(),
+                        originalName: media.originalName || media.filename || media.name,
+                        size: media.size,
+                        type: media.type
+                      };
+                  
+                  return (
+                    <FilePreview
+                      key={index}
+                      file={fileObject}
+                      allowDownload={art.allowDownload}
+                      isMobile={isMobile}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1077,7 +1103,7 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                         borderBottom: index < publishForm.media.length - 1 ? '1px solid #dee2e6' : 'none'
                       }}>
                         <span style={{ fontSize: isMobile ? '14px' : '12px' }}>
-                          {file.split('/').pop()}
+                          {file.filename || file.name || '未知文件'}
                         </span>
                         <button
                           type="button"

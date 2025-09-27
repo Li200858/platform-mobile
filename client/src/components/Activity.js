@@ -51,7 +51,7 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus,
   const loadActivities = async () => {
     setLoading(true);
     try {
-      const data = await api.activity.getActivities();
+      const data = await api.activities.getAll();
       setActivities(data);
     } catch (error) {
       console.error('加载活动失败:', error);
@@ -279,7 +279,7 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus,
                 onClick={async () => {
                   if (!window.confirm('确定要删除这个活动吗？')) return;
                   try {
-                    await api.activity.delete(activity._id, userInfo?.name, isAdmin);
+                    await api.activities.delete(activity._id, userInfo?.name, isAdmin);
                     setMessage('删除成功');
                     await loadActivities();
                   } catch (error) {

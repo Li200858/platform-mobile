@@ -55,7 +55,7 @@ export default function Portfolio({ userInfo, isAdmin, onBack, isMobile = false 
 
     setLoading(true);
     try {
-      const data = await api.portfolio.getUserPortfolios(userInfo.name);
+      const data = await api.portfolio.getByUser(userInfo.name);
       setPortfolios(data);
     } catch (error) {
       console.error('加载作品集失败:', error);

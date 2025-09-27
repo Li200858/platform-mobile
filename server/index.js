@@ -293,7 +293,7 @@ app.post('/api/upload', upload.array('files', 10), (req, res) => {
       return res.status(400).json({ error: '没有上传文件' });
     }
     
-    const fileUrls = req.files.map(file => `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`);
+    const fileUrls = req.files.map(file => `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`);
     res.json({ urls: fileUrls });
   } catch (error) {
     console.error('文件上传错误:', error);
@@ -2013,7 +2013,7 @@ app.post('/api/portfolio/upload-content', upload.array('files'), async (req, res
       type: file.mimetype,
       size: file.size,
       path: file.path,
-      url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`
+      url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`
     })) : [];
 
     console.log('处理文件:', files);
@@ -2085,7 +2085,7 @@ app.post('/api/resources/upload', upload.array('files'), async (req, res) => {
       type: file.mimetype,
       size: file.size,
       path: file.path,
-      url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`
+      url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`
     }));
 
     console.log('上传的文件信息:', files);
