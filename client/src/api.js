@@ -480,6 +480,52 @@ const api = {
     }
   },
 
+  // Activity related APIs
+  activity: {
+    getAll: async () => {
+      const response = await fetch(`${API_BASE_URL}/activities`);
+      return response.json();
+    },
+    create: async (data) => {
+      const response = await fetch(`${API_BASE_URL}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return response.json();
+    },
+    like: async (id, userId) => {
+      const response = await fetch(`${API_BASE_URL}/activities/${id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      return response.json();
+    },
+    favorite: async (id, userId) => {
+      const response = await fetch(`${API_BASE_URL}/activities/${id}/favorite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      return response.json();
+    },
+    comment: async (id, data) => {
+      const response = await fetch(`${API_BASE_URL}/activities/${id}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return response.json();
+    },
+    delete: async (id, authorName, isAdmin) => {
+      const response = await fetch(`${API_BASE_URL}/activities/${id}?authorName=${encodeURIComponent(authorName)}&isAdmin=${isAdmin}`, {
+        method: 'DELETE'
+      });
+      return response.json();
+    }
+  },
+
   // Portfolio related APIs
   portfolio: {
     create: async (portfolioData) => {
@@ -501,7 +547,19 @@ const api = {
       const response = await fetch(`${API_BASE_URL}/portfolio/user/${encodeURIComponent(username)}`);
       return response.json();
     },
+    getUserPortfolios: async (username) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/user/${encodeURIComponent(username)}`);
+      return response.json();
+    },
     getById: async (id) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${id}`);
+      return response.json();
+    },
+    getPortfolio: async (id) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${id}`);
+      return response.json();
+    },
+    getPortfolioDetail: async (id) => {
       const response = await fetch(`${API_BASE_URL}/portfolio/${id}`);
       return response.json();
     },

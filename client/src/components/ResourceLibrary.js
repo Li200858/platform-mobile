@@ -108,7 +108,7 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack, isMobile = 
       formData.append('title', uploadForm.title.trim());
       formData.append('description', uploadForm.description.trim());
       formData.append('category', uploadForm.category.trim());
-      formData.append('authorName', userInfo.name);
+      formData.append('uploader', userInfo.name);
       formData.append('authorClass', userInfo.class);
       
       uploadForm.files.forEach((file, index) => {
