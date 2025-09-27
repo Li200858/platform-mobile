@@ -204,7 +204,27 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
                   window.open(imageUrl, '_blank');
                 }}
               >
-                打开图片
+                预览
+              </button>
+            )}
+            {allowDownload && (
+              <button
+                style={{
+                  ...mobileStyles.openButton,
+                  background: '#007bff',
+                  marginTop: '8px'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const link = document.createElement('a');
+                  link.href = imageUrl;
+                  link.download = fileName;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+              >
+                下载
               </button>
             )}
           </div>
@@ -263,7 +283,26 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
               style={mobileStyles.openButton}
               onClick={() => window.open(videoUrl, '_blank')}
             >
-              打开视频
+              预览
+            </button>
+          )}
+          {allowDownload && (
+            <button
+              style={{
+                ...mobileStyles.openButton,
+                background: '#007bff',
+                marginTop: '8px'
+              }}
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = videoUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+            >
+              下载
             </button>
           )}
         </div>
@@ -315,7 +354,26 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
               style={mobileStyles.openButton}
               onClick={() => window.open(audioUrl, '_blank')}
             >
-              打开音频
+              预览
+            </button>
+          )}
+          {allowDownload && (
+            <button
+              style={{
+                ...mobileStyles.openButton,
+                background: '#007bff',
+                marginTop: '8px'
+              }}
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = audioUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+            >
+              下载
             </button>
           )}
         </div>
@@ -354,7 +412,27 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
               window.open(fileUrl, '_blank');
             }}
           >
-            打开文件
+            预览
+          </button>
+        )}
+        {allowDownload && (
+          <button
+            style={{
+              ...mobileStyles.openButton,
+              background: '#007bff',
+              marginTop: '8px'
+            }}
+            onClick={() => {
+              const fileUrl = file.url || file.path || '';
+              const link = document.createElement('a');
+              link.href = fileUrl;
+              link.download = file.filename || file.name || fileUrl.split('/').pop();
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            下载
           </button>
         )}
       </div>

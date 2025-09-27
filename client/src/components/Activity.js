@@ -2,9 +2,109 @@ import React, { useState, useEffect } from 'react';
 import FilePreview from './FilePreview';
 import api from '../api';
 
+// 活动详情组件
+function ActivityDetail({ activity, onBack, userInfo, isAdmin }) {
+  const isMobile = window.innerWidth <= 768;
+
+  return (
+    <div style={{ 
+      maxWidth: isMobile ? '100%' : 800, 
+      margin: isMobile ? '20px auto' : '40px auto', 
+      background: '#fff', 
+      borderRadius: 15, 
+      padding: isMobile ? 15 : 30, 
+      boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            marginRight: '15px',
+            color: '#7f8c8d'
+          }}
+        >
+          ←
+        </button>
+        <h2 style={{ margin: 0, color: '#2c3e50' }}>活动详情</h2>
+      </div>
+
+      <div style={{ 
+        border: '1px solid #ecf0f1', 
+        borderRadius: 12,
+        padding: 20,
+        background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 15 }}>
+          <div style={{
+            width: 45,
+            height: 45,
+            borderRadius: '50%',
+            backgroundColor: '#3498db',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            marginRight: 15
+          }}>
+            {(activity.authorName || activity.author || '用户').charAt(0)}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: 4, color: '#2c3e50' }}>
+              {activity.authorName || activity.author}
+            </div>
+            <div style={{ fontSize: '14px', color: '#7f8c8d', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span>{activity.authorClass} • {new Date(activity.createdAt).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#2c3e50' }}>
+          {activity.title}
+        </h3>
+        
+        <p style={{ margin: '0 0 15px 0', lineHeight: 1.6, color: '#34495e' }}>
+          {activity.description}
+        </p>
+
+        {activity.media && activity.media.length > 0 && (
+          <div style={{ marginBottom: 15 }}>
+            <FilePreview 
+              urls={activity.media} 
+              apiBaseUrl={process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'} 
+            />
+          </div>
+        )}
+
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '15px',
+          padding: '10px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px'
+        }}>
+          <div style={{ fontSize: '14px', color: '#2c3e50' }}>
+            <strong>活动时间：</strong>
+            {new Date(activity.startDate).toLocaleDateString()} - {new Date(activity.endDate).toLocaleDateString()}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus }) {
   const [activities, setActivities] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [showActivityDetail, setShowActivityDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [likedIds, setLikedIds] = useState(() => {
@@ -107,6 +207,10 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus 
 
   if (showCreate) {
     return <CreateActivityForm onBack={() => setShowCreate(false)} userInfo={userInfo} onSuccess={loadActivities} maintenanceStatus={maintenanceStatus} />;
+  }
+
+  if (showActivityDetail) {
+    return <ActivityDetail activity={showActivityDetail} onBack={() => setShowActivityDetail(null)} userInfo={userInfo} isAdmin={isAdmin} />;
   }
 
   // 检测是否为移动设备
@@ -245,7 +349,16 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus 
               )}
             </div>
 
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#2c3e50' }}>
+            <h3 
+              style={{ 
+                margin: '0 0 10px 0', 
+                fontSize: '20px', 
+                color: '#2c3e50',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
+              onClick={() => setShowActivityDetail(activity)}
+            >
               {activity.title}
             </h3>
             
