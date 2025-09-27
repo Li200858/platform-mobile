@@ -1190,13 +1190,17 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                       const result = await api.art.publish(artData);
                       console.log('发布结果:', result);
                       
-                      setMessage('发布成功');
-                      setShowPublish(false);
-                      clearDraft(); // 清除草稿
-                      
-                      // 立即重新加载列表
-                      console.log('重新加载艺术作品列表...');
-                      await loadArts();
+                      if (result.success) {
+                        setMessage('发布成功');
+                        setShowPublish(false);
+                        clearDraft(); // 清除草稿
+                        
+                        // 立即重新加载列表
+                        console.log('重新加载艺术作品列表...');
+                        await loadArts();
+                      } else {
+                        setMessage('发布失败: ' + (result.error || '未知错误'));
+                      }
                     } catch (error) {
                       console.error('发布失败:', error);
                       setMessage('发布失败，请重试');

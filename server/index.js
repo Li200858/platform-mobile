@@ -308,18 +308,19 @@ app.post('/api/art', async (req, res) => {
   console.log('收到艺术作品发布请求:', { tab, title, content, authorName, authorClass, allowDownload });
   
   if (!title || !content || !authorName || !authorClass) {
+    console.log('缺少必要字段:', { title: !!title, content: !!content, authorName: !!authorName, authorClass: !!authorClass });
     return res.status(400).json({ error: '请填写完整信息' });
   }
   
   try {
     const artData = {
       tab: tab || '全部',
-      title,
-      content,
-      author: authorName,
-      authorName,
-      authorClass,
-      media: media || [],
+      title: title.trim(),
+      content: content.trim(),
+      author: authorName.trim(),
+      authorName: authorName.trim(),
+      authorClass: authorClass.trim(),
+      media: Array.isArray(media) ? media : [],
       allowDownload: allowDownload !== false,
       likes: 0,
       likedUsers: [],
@@ -332,12 +333,23 @@ app.post('/api/art', async (req, res) => {
     
     // 验证数据是否真的保存了
     const savedPost = await Art.findById(post._id);
-    console.log('验证保存的数据:', savedPost ? '成功' : '失败');
-    
-    res.json(post);
+    if (savedPost) {
+      console.log('验证保存的数据成功:', savedPost.title);
+      res.json({
+        success: true,
+        data: post,
+        message: '发布成功'
+      });
+    } else {
+      console.error('验证保存的数据失败');
+      res.status(500).json({ error: '数据保存验证失败' });
+    }
   } catch (error) {
-    console.error('发布失败:', error);
-    res.status(500).json({ error: '发布失败: ' + error.message });
+    console.error('发布失败详细错误:', error);
+    res.status(500).json({ 
+      error: '发布失败: ' + error.message,
+      details: error.toString()
+    });
   }
 });
 

@@ -91,6 +91,12 @@ export default function UserSync({ onBack, isMobile = false }) {
       return;
     }
 
+    // 强制检查姓名是否已锁定
+    if (nameLocked) {
+      setMessage('姓名已锁定，无法修改。如需修改请联系管理员。');
+      return;
+    }
+
     setLoading(true);
     try {
       // 检查姓名是否可用
@@ -128,6 +134,9 @@ export default function UserSync({ onBack, isMobile = false }) {
       console.error('同步失败:', error);
       if (error.message.includes('该姓名已被注册')) {
         setMessage('该姓名已被其他用户注册，请使用其他姓名');
+      } else if (error.message.includes('姓名已设置')) {
+        setMessage('姓名已设置，无法修改。如需修改请联系管理员。');
+        setNameLocked(true);
       } else {
         setMessage('同步失败，请检查网络连接后重试');
       }
