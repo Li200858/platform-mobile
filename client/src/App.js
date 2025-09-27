@@ -197,7 +197,7 @@ function MainApp() {
           rootElement.style.overflowY = 'auto';
           
           // 强制重排
-          rootElement.offsetHeight;
+          void rootElement.offsetHeight;
         }
       };
 
