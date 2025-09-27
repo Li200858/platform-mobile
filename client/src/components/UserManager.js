@@ -73,17 +73,13 @@ class UserManager {
     }
   }
 
-  static downloadUserData() {
+  static openUserData() {
     const data = this.exportUserData();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `user_data_${data.userId}_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    window.open(url, '_blank');
+    // 延迟释放URL，确保新窗口能正常打开
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   static uploadUserData(file) {

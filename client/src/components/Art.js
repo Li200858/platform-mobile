@@ -1011,7 +1011,7 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                     onChange={(e) => setPublishForm(prev => ({ ...prev, allowDownload: e.target.checked }))}
                     style={{ transform: 'scale(1.2)' }}
                   />
-                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>允许下载</span>
+                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>允许打开</span>
                 </label>
               </div>
               

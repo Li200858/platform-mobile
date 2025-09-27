@@ -94,8 +94,8 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
       justifyContent: 'space-between',
       alignItems: 'center'
     },
-    downloadButton: {
-      background: '#3498db',
+    openButton: {
+      background: '#17a2b8',
       color: 'white',
       border: 'none',
       borderRadius: '4px',
@@ -198,13 +198,13 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
             </div>
             {allowDownload && (
               <button
-                style={mobileStyles.downloadButton}
+                style={mobileStyles.openButton}
                 onClick={(e) => {
                   e.stopPropagation();
                   window.open(imageUrl, '_blank');
                 }}
               >
-                查看原图
+                打开图片
               </button>
             )}
           </div>
@@ -260,10 +260,10 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
           </div>
           {allowDownload && (
             <button
-              style={mobileStyles.downloadButton}
+              style={mobileStyles.openButton}
               onClick={() => window.open(videoUrl, '_blank')}
             >
-              下载视频
+              打开视频
             </button>
           )}
         </div>
@@ -312,10 +312,10 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
           
           {allowDownload && (
             <button
-              style={mobileStyles.downloadButton}
+              style={mobileStyles.openButton}
               onClick={() => window.open(audioUrl, '_blank')}
             >
-              下载音频
+              打开音频
             </button>
           )}
         </div>
@@ -347,22 +347,14 @@ export default function FilePreview({ file, allowDownload = true, isMobile = fal
         </div>
         {allowDownload && (
           <button
-            style={mobileStyles.downloadButton}
+            style={mobileStyles.openButton}
             onClick={() => {
               const fileUrl = file.url || file.path || '';
-              if (fileType === 'document') {
-                // 对于文档，尝试在新窗口中打开
-                window.open(fileUrl, '_blank');
-              } else {
-                // 对于其他文件，直接下载
-                const link = document.createElement('a');
-                link.href = fileUrl;
-                link.download = fileName;
-                link.click();
-              }
+              // 所有文件都在新窗口中打开预览
+              window.open(fileUrl, '_blank');
             }}
           >
-            下载文件
+            打开文件
           </button>
         )}
       </div>

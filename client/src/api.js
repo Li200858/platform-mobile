@@ -452,11 +452,11 @@ const api = {
       });
       return response.json();
     },
-    download: async (id) => {
+    open: async (id) => {
       const response = await fetch(`${API_BASE_URL}/resources/${id}/download`);
       return response.json();
     },
-    downloadFile: (filename) => {
+    openFile: (filename) => {
       return `${API_BASE_URL}/resources/file/${encodeURIComponent(filename)}`;
     }
   },

@@ -308,7 +308,7 @@ export const api = {
     delete: (id) => api.request(`/api/resources/${id}`, {
       method: 'DELETE',
     }),
-    download: (id) => api.request(`/api/resources/${id}/download`),
+    open: (id) => api.request(`/api/resources/${id}/download`),
   },
 
   // 搜索功能API

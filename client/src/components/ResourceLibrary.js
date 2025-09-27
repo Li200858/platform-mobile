@@ -155,10 +155,10 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack, isMobile = 
     }
   };
 
-  // 下载资源
-  const handleDownload = (filename) => {
-    const downloadUrl = api.resources.downloadFile(filename);
-    window.open(downloadUrl, '_blank');
+  // 打开资源预览
+  const handleOpen = (filename) => {
+    const fileUrl = api.resources.openFile(filename);
+    window.open(fileUrl, '_blank');
   };
 
   // 过滤资源
@@ -348,10 +348,10 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack, isMobile = 
                 alignItems: 'center'
               }}>
                 <button
-                  onClick={() => handleDownload(resource.files[0]?.filename)}
+                  onClick={() => handleOpen(resource.files[0]?.filename)}
                   style={{
                     padding: isMobile ? '6px 10px' : '4px 8px',
-                    background: '#3498db',
+                    background: '#17a2b8',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
@@ -361,7 +361,7 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack, isMobile = 
                     touchAction: 'manipulation'
                   }}
                 >
-                  下载
+                  打开
                 </button>
                 {(resource.authorName === userInfo?.name || isAdmin) && (
                   <button
