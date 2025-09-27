@@ -305,33 +305,51 @@ app.post('/api/upload', upload.array('files', 10), (req, res) => {
 app.post('/api/art', async (req, res) => {
   const { tab, title, content, media, authorName, authorClass, allowDownload } = req.body;
   
-  if (!tab || !title || !content || !authorName || !authorClass) {
+  console.log('收到艺术作品发布请求:', { tab, title, content, authorName, authorClass, allowDownload });
+  
+  if (!title || !content || !authorName || !authorClass) {
+    console.log('缺少必要字段:', { title: !!title, content: !!content, authorName: !!authorName, authorClass: !!authorClass });
     return res.status(400).json({ error: '请填写完整信息' });
   }
   
   try {
-    const post = await Art.create({
-      tab,
-      title,
-      content,
-      author: authorName,
-      authorName,
-      authorClass,
-      media: media || [],
+    const artData = {
+      tab: tab || '全部',
+      title: title.trim(),
+      content: content.trim(),
+      author: authorName.trim(),
+      authorName: authorName.trim(),
+      authorClass: authorClass.trim(),
+      media: Array.isArray(media) ? media : [],
       allowDownload: allowDownload !== false,
       likes: 0,
       likedUsers: [],
       favorites: []
-    });
+    };
     
-    res.json({
-      success: true,
-      data: post,
-      message: '发布成功'
-    });
+    console.log('创建艺术作品数据:', artData);
+    const post = await Art.create(artData);
+    console.log('艺术作品创建成功:', post._id, post.title);
+    
+    // 验证数据是否真的保存了
+    const savedPost = await Art.findById(post._id);
+    if (savedPost) {
+      console.log('验证保存的数据成功:', savedPost.title);
+      res.json({
+        success: true,
+        data: post,
+        message: '发布成功'
+      });
+    } else {
+      console.error('验证保存的数据失败');
+      res.status(500).json({ error: '数据保存验证失败' });
+    }
   } catch (error) {
-    console.error('发布失败:', error);
-    res.status(500).json({ error: '发布失败' });
+    console.error('发布失败详细错误:', error);
+    res.status(500).json({ 
+      error: '发布失败: ' + error.message,
+      details: error.toString()
+    });
   }
 });
 
@@ -1220,7 +1238,7 @@ app.post('/api/user/sync', async (req, res) => {
     let user = await User.findOne({ userID });
     
     if (!user) {
-      // 如果没有找到用户，检查姓名是否已被使用
+      // 如果没有找到用户，强制检查姓名唯一性
       if (name && name !== '用户') {
         const existingUser = await User.findOne({ name });
         if (existingUser) {
@@ -1231,41 +1249,46 @@ app.post('/api/user/sync', async (req, res) => {
         }
       }
       
-      // 创建新用户
-      user = await User.create({
-        userID,
-        name: name || '用户',
-        class: userClass || '未知班级',
-        avatar: avatar || '',
-        role: 'user',
-        isAdmin: false
-      });
-    } else {
-      // 如果找到用户，检查姓名是否被其他用户使用
-      if (name && name !== '用户' && name !== user.name) {
-        const existingUser = await User.findOne({ name });
-        if (existingUser && existingUser.userID !== userID) {
+      // 创建新用户，使用try-catch处理唯一性约束
+      try {
+        user = await User.create({
+          userID,
+          name: name || '用户',
+          class: userClass || '未知班级',
+          avatar: avatar || '',
+          role: 'user',
+          isAdmin: false
+        });
+      } catch (createError) {
+        if (createError.code === 11000) {
           return res.status(400).json({ 
-            error: '该姓名已被其他用户注册，请使用其他姓名',
+            error: '该姓名已被注册，请使用其他姓名',
             code: 'NAME_TAKEN'
           });
         }
+        throw createError;
+      }
+    } else {
+      // 如果找到用户，检查是否尝试修改姓名
+      if (name && name !== '用户' && name !== user.name) {
+        // 检查新姓名是否已被其他用户使用
+        const existingUser = await User.findOne({ name, _id: { $ne: user._id } });
+        if (existingUser) {
+          return res.status(400).json({ 
+            error: '该姓名已被其他用户使用，请使用其他姓名',
+            code: 'NAME_TAKEN'
+          });
+        }
+        
+        // 姓名一旦设置就不能更改
+        return res.status(400).json({ 
+          error: '姓名已设置，无法修改。如需修改请联系管理员。',
+          code: 'NAME_LOCKED'
+        });
       }
       
       // 更新用户信息（保持绑定关系）
-      // 姓名一旦设置就不能更改，只能更新班级和头像
-      if (name && name !== '用户' && name !== user.name) {
-        // 如果尝试修改姓名，检查是否被其他用户使用
-        const existingUser = await User.findOne({ name });
-        if (existingUser && existingUser.userID !== userID) {
-          return res.status(400).json({ 
-            error: '该姓名已被其他用户注册，请使用其他姓名',
-            code: 'NAME_TAKEN'
-          });
-        }
-        // 如果姓名可用，允许修改
-        user.name = name;
-      }
+      // 只能更新班级和头像，不能修改姓名
       if (userClass && userClass !== '未知班级') user.class = userClass;
       if (avatar) user.avatar = avatar;
       await user.save();
@@ -1317,26 +1340,6 @@ app.post('/api/user/check-name', async (req, res) => {
   } catch (error) {
     console.error('检查姓名失败:', error);
     res.status(500).json({ error: '检查姓名失败' });
-  }
-});
-
-// 搜索用户
-app.get('/api/user/search', async (req, res) => {
-  const { name } = req.query;
-  
-  if (!name) {
-    return res.status(400).json({ error: '缺少搜索参数' });
-  }
-  
-  try {
-    const users = await User.find({ 
-      name: { $regex: name, $options: 'i' } 
-    }).select('name class userID').limit(10);
-    
-    res.json(users);
-  } catch (error) {
-    console.error('搜索用户失败:', error);
-    res.status(500).json({ error: '搜索失败' });
   }
 });
 

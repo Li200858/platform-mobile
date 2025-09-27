@@ -29,6 +29,10 @@ const api = {
       const response = await fetch(`${API_BASE_URL}/user/${userID}`);
       return response.json();
     },
+    getByID: async (userID) => {
+      const response = await fetch(`${API_BASE_URL}/user/${userID}`);
+      return response.json();
+    },
     searchUsers: async (query) => {
       const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`);
       return response.json();

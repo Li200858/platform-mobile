@@ -3,7 +3,7 @@ import { useUserID } from './UserIDManager';
 import api from '../api';
 
 export default function UserSync({ onBack, isMobile = false }) {
-  const { userID, isLoading: userIDLoading, importUserID, exportUserID } = useUserID();
+  const { userID, isLoading: userIDLoading, importUserID, exportUserID, resetUserID } = useUserID();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [userInfo, setUserInfo] = useState(null);
@@ -14,7 +14,9 @@ export default function UserSync({ onBack, isMobile = false }) {
   });
   const [nameEdited, setNameEdited] = useState(false);
   const [nameLocked, setNameLocked] = useState(false);
+  const [currentUserInfo, setCurrentUserInfo] = useState(null);
 
+  // 移动端样式
   const mobileStyles = {
     container: {
       padding: isMobile ? '15px' : '20px',
@@ -47,6 +49,83 @@ export default function UserSync({ onBack, isMobile = false }) {
       '-webkit-tap-highlight-color': 'transparent',
       touchAction: 'manipulation',
       minHeight: isMobile ? '48px' : '44px'
+    },
+    input: {
+      width: '100%',
+      padding: isMobile ? '14px' : '12px',
+      border: '2px solid #e9ecef',
+      borderRadius: '8px',
+      fontSize: isMobile ? '16px' : '14px',
+      boxSizing: 'border-box',
+      transition: 'border-color 0.3s ease',
+      marginBottom: isMobile ? '10px' : '15px'
+    },
+    button: {
+      padding: isMobile ? '12px 20px' : '10px 20px',
+      border: 'none',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      fontSize: isMobile ? '16px' : '14px',
+      fontWeight: '500',
+      marginBottom: isMobile ? '10px' : '15px',
+      '-webkit-tap-highlight-color': 'transparent',
+      touchAction: 'manipulation',
+      minHeight: isMobile ? '44px' : '40px'
+    },
+    card: {
+      background: 'white',
+      borderRadius: '15px',
+      padding: isMobile ? '20px' : '30px',
+      marginBottom: isMobile ? '20px' : '30px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+      border: '1px solid #f0f0f0'
+    },
+    title: {
+      fontSize: isMobile ? '24px' : '28px',
+      fontWeight: 'bold',
+      color: '#2c3e50',
+      marginBottom: isMobile ? '20px' : '30px',
+      textAlign: 'center'
+    },
+    sectionTitle: {
+      fontSize: isMobile ? '18px' : '20px',
+      fontWeight: 'bold',
+      color: '#2c3e50',
+      marginBottom: isMobile ? '15px' : '20px'
+    },
+    label: {
+      display: 'block',
+      marginBottom: isMobile ? '8px' : '10px',
+      fontWeight: '500',
+      color: '#2c3e50',
+      fontSize: isMobile ? '16px' : '14px'
+    },
+    message: {
+      padding: isMobile ? '12px 16px' : '15px 20px',
+      borderRadius: '8px',
+      marginBottom: isMobile ? '15px' : '20px',
+      fontSize: isMobile ? '14px' : '16px',
+      fontWeight: '500'
+    },
+    successMessage: {
+      background: '#d4edda',
+      color: '#155724',
+      border: '1px solid #c3e6cb'
+    },
+    errorMessage: {
+      background: '#f8d7da',
+      color: '#721c24',
+      border: '1px solid #f5c6cb'
+    },
+    warningMessage: {
+      background: '#fff3cd',
+      color: '#856404',
+      border: '1px solid #ffeaa7'
+    },
+    infoMessage: {
+      background: '#d1ecf1',
+      color: '#0c5460',
+      border: '1px solid #bee5eb'
     }
   };
 
@@ -75,9 +154,25 @@ export default function UserSync({ onBack, isMobile = false }) {
     }
   };
 
+  // 加载当前用户信息
   useEffect(() => {
     loadLocalUserInfo();
-  }, []);
+    
+    const loadCurrentUserInfo = async () => {
+      if (userID) {
+        try {
+          const userData = await api.user.getByID(userID);
+          if (userData && userData.name && userData.class) {
+            setCurrentUserInfo(userData);
+          }
+        } catch (error) {
+          console.log('无法获取当前用户信息:', error.message);
+        }
+      }
+    };
+    
+    loadCurrentUserInfo();
+  }, [userID]);
 
   // 同步用户信息到服务器
   const handleSync = async () => {
@@ -219,372 +314,282 @@ export default function UserSync({ onBack, isMobile = false }) {
     }
   };
 
+  // 重置用户ID
+  const handleReset = () => {
+    if (window.confirm('确定要重置用户ID吗？这将清除所有本地数据，需要重新导入。')) {
+      try {
+        resetUserID();
+        setMessage('用户ID已重置！');
+        setUserInfo(null);
+        setFormData({ name: '', class: '' });
+        setNameEdited(false);
+        setNameLocked(false);
+      } catch (error) {
+        setMessage('重置失败：' + error.message);
+      }
+    }
+  };
+
+  if (userIDLoading) {
+    return (
+      <div style={mobileStyles.container}>
+        <div style={{ textAlign: 'center', padding: isMobile ? '40px 20px' : '60px' }}>
+          <div style={{ fontSize: isMobile ? '18px' : '20px', color: '#6c757d' }}>
+            加载中...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={mobileStyles.container}>
       {/* 返回按钮 */}
-      <button onClick={onBack} style={mobileStyles.backButton}>
+      <button
+        onClick={onBack}
+        style={mobileStyles.backButton}
+      >
         ← 返回
       </button>
 
       {/* 标题 */}
-      <h1 style={{
-        fontSize: isMobile ? '24px' : '28px',
-        color: '#2c3e50',
-        marginBottom: '20px',
-        textAlign: 'center'
-      }}>
-        数据同步
-      </h1>
+      <h1 style={mobileStyles.title}>用户数据同步</h1>
 
-      {/* 消息提示 */}
+      {/* 当前用户ID显示 */}
+      <div style={mobileStyles.card}>
+        <h3 style={mobileStyles.sectionTitle}>当前用户ID</h3>
+        <div style={{ 
+          fontFamily: 'monospace', 
+          fontSize: isMobile ? '16px' : '14px', 
+          color: '#2c3e50',
+          wordBreak: 'break-all',
+          background: '#f8f9fa',
+          padding: isMobile ? '12px' : '15px',
+          borderRadius: '8px',
+          border: '1px solid #dee2e6',
+          marginBottom: isMobile ? '15px' : '20px'
+        }}>
+          {userID}
+        </div>
+        <div style={{ fontSize: isMobile ? '12px' : '14px', color: '#7f8c8d', marginBottom: isMobile ? '15px' : '20px' }}>
+          此ID用于跨设备同步您的数据
+        </div>
+        
+        {/* 显示当前绑定的用户信息 */}
+        {currentUserInfo ? (
+          <div style={{ 
+            padding: isMobile ? '15px' : '20px', 
+            background: '#e8f5e8', 
+            borderRadius: '8px',
+            border: '1px solid #c3e6c3'
+          }}>
+            <div style={{ fontSize: isMobile ? '14px' : '16px', color: '#27ae60', fontWeight: 'bold', marginBottom: '8px' }}>
+              [已绑定] 已绑定用户信息
+            </div>
+            <div style={{ fontSize: isMobile ? '13px' : '14px', color: '#2c3e50', marginBottom: '5px' }}>
+              <strong>姓名：</strong>{currentUserInfo.name}
+            </div>
+            <div style={{ fontSize: isMobile ? '13px' : '14px', color: '#2c3e50', marginBottom: '5px' }}>
+              <strong>班级：</strong>{currentUserInfo.class}
+            </div>
+            <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#7f8c8d' }}>
+              此ID已与上述用户信息绑定，导入此ID将自动获取该用户信息
+            </div>
+          </div>
+        ) : (
+          <div style={{ 
+            padding: isMobile ? '15px' : '20px', 
+            background: '#fff3cd', 
+            borderRadius: '8px',
+            border: '1px solid #ffeaa7'
+          }}>
+            <div style={{ fontSize: isMobile ? '14px' : '16px', color: '#856404', fontWeight: 'bold', marginBottom: '8px' }}>
+              [警告] 未绑定用户信息
+            </div>
+            <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#856404' }}>
+              此ID尚未绑定任何用户信息，需要先在个人信息页面填写姓名和班级
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 消息显示 */}
       {message && (
         <div style={{
-          background: message.includes('成功') ? '#d4edda' : message.includes('失败') ? '#f8d7da' : '#d1ecf1',
-          color: message.includes('成功') ? '#155724' : message.includes('失败') ? '#721c24' : '#0c5460',
-          padding: '12px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          border: `1px solid ${message.includes('成功') ? '#c3e6cb' : message.includes('失败') ? '#f5c6cb' : '#bee5eb'}`
+          ...mobileStyles.message,
+          ...(message.includes('成功') ? mobileStyles.successMessage : 
+              message.includes('警告') ? mobileStyles.warningMessage :
+              message.includes('错误') || message.includes('失败') ? mobileStyles.errorMessage :
+              mobileStyles.infoMessage)
         }}>
           {message}
-          <button
-            onClick={() => setMessage('')}
-            style={{
-              float: 'right',
-              background: 'none',
-              border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: 'inherit'
-            }}
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* 用户ID显示 */}
-      <div style={{
-        background: '#f8f9fa',
-        borderRadius: '8px',
-        padding: '15px',
-        marginBottom: '20px',
-        border: '1px solid #e9ecef'
-      }}>
-        <div style={{
-          fontSize: isMobile ? '16px' : '14px',
-          fontWeight: '500',
-          color: '#2c3e50',
-          marginBottom: '8px'
-        }}>
-          您的用户ID
+      {/* 个人信息填写 */}
+      <div style={mobileStyles.card}>
+        <h3 style={mobileStyles.sectionTitle}>个人信息</h3>
+        
+        <div>
+          <label style={mobileStyles.label}>
+            姓名 * {nameLocked && <span style={{ color: '#e74c3c', fontSize: isMobile ? '12px' : '10px' }}>(已锁定)</span>}
+          </label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => !nameLocked && setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder={nameLocked ? "姓名已锁定，无法修改" : "请输入您的真实姓名"}
+            disabled={nameLocked}
+            style={{
+              ...mobileStyles.input,
+              border: nameLocked ? '2px solid #e74c3c' : '2px solid #e9ecef',
+              backgroundColor: nameLocked ? '#f8f9fa' : 'white',
+              color: nameLocked ? '#6c757d' : '#2c3e50',
+              cursor: nameLocked ? 'not-allowed' : 'text'
+            }}
+          />
+          {nameLocked && (
+            <div style={{
+              marginTop: '8px',
+              padding: isMobile ? '8px 12px' : '10px 15px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '6px',
+              color: '#856404',
+              fontSize: isMobile ? '12px' : '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span>⚠️</span>
+              <span>姓名已设置并锁定，无法再次修改。如需修改请联系管理员。</span>
+            </div>
+          )}
         </div>
-        <div style={{
-          fontSize: isMobile ? '14px' : '12px',
-          color: '#6c757d',
-          fontFamily: 'monospace',
-          wordBreak: 'break-all',
-          background: 'white',
-          padding: '8px',
-          borderRadius: '4px',
-          border: '1px solid #dee2e6'
-        }}>
-          {userIDLoading ? '生成中...' : userID || '未生成'}
+
+        <div>
+          <label style={mobileStyles.label}>班级</label>
+          <input
+            type="text"
+            value={formData.class}
+            onChange={(e) => setFormData(prev => ({ ...prev, class: e.target.value }))}
+            placeholder="请输入您的班级"
+            style={mobileStyles.input}
+          />
         </div>
+
+        <button
+          onClick={handleSync}
+          disabled={loading || !userID || nameLocked}
+          style={{
+            ...mobileStyles.syncButton,
+            opacity: (loading || !userID || nameLocked) ? 0.6 : 1,
+            cursor: (loading || !userID || nameLocked) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {loading ? '同步中...' : nameLocked ? '姓名已锁定' : '同步到服务器'}
+        </button>
+
+        <button
+          onClick={checkServerUserInfo}
+          disabled={loading || !userID}
+          style={{
+            ...mobileStyles.button,
+            background: '#17a2b8',
+            color: 'white',
+            border: 'none',
+            opacity: (loading || !userID) ? 0.6 : 1,
+            cursor: (loading || !userID) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {loading ? '获取中...' : '从服务器获取'}
+        </button>
       </div>
 
-      {/* ID导入导出功能 */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
-        padding: isMobile ? '20px' : '30px',
-        marginBottom: '20px',
-        '-webkit-transform': 'translateZ(0)',
-        transform: 'translateZ(0)',
-        '-webkit-backface-visibility': 'hidden',
-        backfaceVisibility: 'hidden'
-      }}>
-        <h3 style={{
-          fontSize: isMobile ? '18px' : '20px',
-          color: '#2c3e50',
-          marginBottom: '15px',
-          textAlign: 'center'
-        }}>
-          跨设备同步
-        </h3>
-
-        {/* 导出功能 */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{
-            display: 'block',
-            marginBottom: '8px',
-            fontWeight: '500',
-            color: '#2c3e50',
-            fontSize: isMobile ? '16px' : '14px'
-          }}>
-            导出用户ID（用于其他设备）
-          </label>
-          <button
-            onClick={handleExport}
-            style={{
-              width: '100%',
-              padding: isMobile ? '14px' : '12px',
-              background: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: isMobile ? '16px' : '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'background-color 0.3s ease'
-            }}
-            onMouseOver={(e) => e.target.style.background = '#218838'}
-            onMouseOut={(e) => e.target.style.background = '#28a745'}
-          >
-            复制用户ID
-          </button>
-        </div>
-
-        {/* 导入功能 */}
-        <div>
-          <label style={{
-            display: 'block',
-            marginBottom: '8px',
-            fontWeight: '500',
-            color: '#2c3e50',
-            fontSize: isMobile ? '16px' : '14px'
-          }}>
-            导入用户ID（从其他设备）
-          </label>
+      {/* 导入用户ID */}
+      <div style={mobileStyles.card}>
+        <h3 style={mobileStyles.sectionTitle}>导入用户ID</h3>
+        <div style={{ display: 'flex', gap: isMobile ? '8px' : '10px', marginBottom: isMobile ? '15px' : '20px' }}>
           <input
             type="text"
             value={importID}
             onChange={(e) => setImportID(e.target.value)}
-            placeholder="粘贴其他设备的用户ID"
+            placeholder="请输入要导入的用户ID"
             style={{
-              width: '100%',
-              padding: isMobile ? '14px' : '12px',
-              border: '2px solid #e9ecef',
-              borderRadius: '8px',
-              fontSize: isMobile ? '16px' : '14px',
-              boxSizing: 'border-box',
-              transition: 'border-color 0.3s ease',
-              marginBottom: '10px'
+              ...mobileStyles.input,
+              marginBottom: 0,
+              flex: 1
             }}
           />
           <button
             onClick={handleImport}
-            disabled={loading || !importID.trim()}
+            disabled={loading}
             style={{
-              width: '100%',
-              padding: isMobile ? '14px' : '12px',
-              background: loading || !importID.trim() ? '#6c757d' : '#007bff',
+              ...mobileStyles.button,
+              background: '#27ae60',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: isMobile ? '16px' : '14px',
-              fontWeight: '500',
-              cursor: loading || !importID.trim() ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.3s ease'
+              marginBottom: 0,
+              opacity: loading ? 0.6 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
           >
-            {loading ? '导入中...' : '导入用户ID'}
+            {loading ? '导入中...' : '导入'}
           </button>
         </div>
-      </div>
-
-      {/* 用户信息表单 */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
-        padding: isMobile ? '20px' : '30px',
-        marginBottom: '20px',
-        '-webkit-transform': 'translateZ(0)',
-        transform: 'translateZ(0)',
-        '-webkit-backface-visibility': 'hidden',
-        backfaceVisibility: 'hidden'
-      }}>
-        <h3 style={{
-          fontSize: isMobile ? '18px' : '16px',
-          color: '#2c3e50',
-          marginBottom: '20px',
-          textAlign: 'center'
-        }}>
-          用户信息设置
-        </h3>
-
-        <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontWeight: '500',
-              color: '#2c3e50',
-              fontSize: isMobile ? '16px' : '14px'
-            }}>
-              姓名 * {nameLocked && <span style={{ color: '#e74c3c', fontSize: '12px' }}>(已锁定)</span>}
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => !nameLocked && setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder={nameLocked ? "姓名已锁定，无法修改" : "请输入您的真实姓名"}
-              disabled={nameLocked}
-              style={{
-                width: '100%',
-                padding: isMobile ? '14px' : '12px',
-                border: nameLocked ? '2px solid #e74c3c' : '2px solid #e9ecef',
-                borderRadius: '8px',
-                fontSize: isMobile ? '16px' : '14px',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.3s ease',
-                backgroundColor: nameLocked ? '#f8f9fa' : 'white',
-                color: nameLocked ? '#6c757d' : '#2c3e50',
-                cursor: nameLocked ? 'not-allowed' : 'text'
-              }}
-            />
-            {nameLocked && (
-              <div style={{
-                marginTop: '8px',
-                padding: '8px 12px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '6px',
-                color: '#856404',
-                fontSize: isMobile ? '14px' : '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span>⚠️</span>
-                <span>姓名已设置并锁定，无法再次修改。如需修改请联系管理员。</span>
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontWeight: '500',
-              color: '#2c3e50',
-              fontSize: isMobile ? '16px' : '14px'
-            }}>
-              班级
-            </label>
-            <input
-              type="text"
-              value={formData.class}
-              onChange={(e) => setFormData(prev => ({ ...prev, class: e.target.value }))}
-              placeholder="请输入您的班级"
-              style={{
-                width: '100%',
-                padding: isMobile ? '14px' : '12px',
-                border: '2px solid #e9ecef',
-                borderRadius: '8px',
-                fontSize: isMobile ? '16px' : '14px',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.3s ease'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '30px' }}>
-          </div>
-
-          {/* 同步按钮 */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '15px',
-            flexWrap: 'wrap'
-          }}>
-            <button
-              onClick={handleSync}
-              disabled={loading || !userID || nameLocked}
-              style={{
-                ...mobileStyles.syncButton,
-                opacity: (loading || !userID || nameLocked) ? 0.6 : 1,
-                cursor: (loading || !userID || nameLocked) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? '同步中...' : nameLocked ? '姓名已锁定' : '同步到服务器'}
-            </button>
-            
-            <button
-              onClick={checkServerUserInfo}
-              disabled={loading || !userID}
-              style={{
-                ...mobileStyles.syncButton,
-                background: '#17a2b8',
-                opacity: (loading || !userID) ? 0.6 : 1,
-                cursor: (loading || !userID) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              从服务器获取
-            </button>
-          </div>
+        <div style={{ fontSize: isMobile ? '12px' : '14px', color: '#7f8c8d' }}>
+          在其他设备上复制用户ID，然后在此处导入以同步数据
         </div>
       </div>
 
-      {/* 当前用户信息显示 */}
-      {userInfo && (
-        <div style={{
-          background: '#f8f9fa',
-          borderRadius: '8px',
-          padding: '20px',
-          border: '1px solid #e9ecef'
-        }}>
-          <h4 style={{
-            fontSize: isMobile ? '16px' : '14px',
-            color: '#2c3e50',
-            marginBottom: '15px'
-          }}>
-            当前用户信息
-          </h4>
-          <div style={{
-            fontSize: isMobile ? '14px' : '13px',
-            color: '#6c757d',
-            lineHeight: '1.6'
-          }}>
-            <div><strong>用户ID:</strong> {userInfo.userID}</div>
-            <div><strong>姓名:</strong> {userInfo.name}</div>
-            <div><strong>班级:</strong> {userInfo.class}</div>
-            {userInfo.role && <div><strong>角色:</strong> {userInfo.role}</div>}
-            {userInfo.isAdmin && <div><strong>管理员:</strong> 是</div>}
-          </div>
+      {/* 导出用户ID */}
+      <div style={mobileStyles.card}>
+        <h3 style={mobileStyles.sectionTitle}>导出用户ID</h3>
+        <button
+          onClick={handleExport}
+          style={{
+            ...mobileStyles.button,
+            background: '#3498db',
+            color: 'white',
+            border: 'none'
+          }}
+        >
+          复制用户ID
+        </button>
+        <div style={{ fontSize: isMobile ? '12px' : '14px', color: '#7f8c8d' }}>
+          复制用户ID到其他设备进行数据同步
         </div>
-      )}
+      </div>
+
+      {/* 重置用户ID */}
+      <div style={mobileStyles.card}>
+        <h3 style={mobileStyles.sectionTitle}>重置用户ID</h3>
+        <button
+          onClick={handleReset}
+          style={{
+            ...mobileStyles.button,
+            background: '#e74c3c',
+            color: 'white',
+            border: 'none'
+          }}
+        >
+          重置用户ID
+        </button>
+        <div style={{ fontSize: isMobile ? '12px' : '14px', color: '#7f8c8d' }}>
+          重置后将清除所有本地数据，需要重新导入
+        </div>
+      </div>
 
       {/* 使用说明 */}
-      <div style={{
-        background: '#fff3cd',
-        borderRadius: '8px',
-        padding: '20px',
-        border: '1px solid #ffeaa7',
-        marginTop: '20px'
-      }}>
-        <h4 style={{
-          fontSize: isMobile ? '16px' : '14px',
-          color: '#856404',
-          marginBottom: '15px'
-        }}>
-          使用说明
-        </h4>
-        <ul style={{
-          fontSize: isMobile ? '14px' : '13px',
-          color: '#856404',
-          lineHeight: '1.6',
-          paddingLeft: '20px',
-          margin: 0
-        }}>
-          <li>数据同步会将您的信息保存到服务器</li>
-          <li>姓名一旦设置，通常不能修改（除非未被其他用户使用）</li>
-          <li>建议使用真实姓名以便其他用户识别</li>
-          <li>本地数据会与服务器数据保持同步</li>
-        </ul>
+      <div style={mobileStyles.card}>
+        <h4 style={{ margin: '0 0 15px 0', color: '#0c5460', fontSize: isMobile ? '16px' : '18px' }}>使用说明</h4>
+        <div style={{ fontSize: isMobile ? '14px' : '16px', color: '#0c5460', lineHeight: '1.6' }}>
+          <p><strong>1. 同步数据：</strong>在手机或其他设备上复制用户ID，然后在此处导入</p>
+          <p><strong>2. 导出ID：</strong>点击"复制用户ID"按钮，将ID分享给其他设备</p>
+          <p><strong>3. 重置ID：</strong>如果需要重新开始，可以重置用户ID</p>
+          <p><strong>4. 姓名锁定：</strong>姓名一旦设置并同步成功后将无法修改，确保数据一致性</p>
+          <p><strong>注意：</strong>用户ID是纯数字格式，用于唯一标识您的账户</p>
+        </div>
       </div>
     </div>
   );
