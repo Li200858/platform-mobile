@@ -8,8 +8,7 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    class: '',
-    avatar: ''
+    class: ''
   });
 
   const mobileStyles = {
@@ -68,8 +67,7 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
         setUserInfo(parsedInfo);
         setFormData({
           name: parsedInfo.name || '',
-          class: parsedInfo.class || '',
-          avatar: parsedInfo.avatar || ''
+          class: parsedInfo.class || ''
         });
       }
     } catch (error) {
@@ -93,8 +91,7 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
       const updatedInfo = {
         ...userInfo,
         name: formData.name.trim(),
-        class: formData.class.trim(),
-        avatar: formData.avatar.trim()
+        class: formData.class.trim()
       };
 
       // 保存到localStorage
@@ -102,12 +99,11 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
       
       // 同步到服务器
       try {
-        await api.user.sync({
-          userID: userInfo?.userID || Date.now().toString(),
-          name: formData.name.trim(),
-          class: formData.class.trim(),
-          avatar: formData.avatar.trim()
-        });
+        await api.user.sync(
+          userInfo?.userID || Date.now().toString(),
+          formData.name.trim(),
+          formData.class.trim()
+        );
       } catch (syncError) {
         console.warn('同步到服务器失败，但本地保存成功:', syncError);
       }
@@ -132,8 +128,7 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
   const handleCancel = () => {
     setFormData({
       name: userInfo?.name || '',
-      class: userInfo?.class || '',
-      avatar: userInfo?.avatar || ''
+      class: userInfo?.class || ''
     });
     setEditMode(false);
   };
@@ -217,41 +212,9 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
             '-webkit-backface-visibility': 'hidden',
             backfaceVisibility: 'hidden'
           }}>
-            {userInfo?.avatar ? (
-              <img
-                src={userInfo.avatar}
-                alt="头像"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }}
-              />
-            ) : (
-              (userInfo?.name || '用户').charAt(0).toUpperCase()
-            )}
+            {(userInfo?.name || '用户').charAt(0).toUpperCase()}
           </div>
           
-          {editMode && (
-            <div style={{ marginTop: '10px' }}>
-              <input
-                type="url"
-                placeholder="头像链接（可选）"
-                value={formData.avatar}
-                onChange={(e) => setFormData(prev => ({ ...prev, avatar: e.target.value }))}
-                style={{
-                  width: '100%',
-                  maxWidth: '300px',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '16px' : '14px',
-                  textAlign: 'center'
-                }}
-              />
-            </div>
-          )}
         </div>
 
         {/* 用户信息表单 */}
@@ -396,7 +359,6 @@ export default function UserProfile({ onBack, onUserInfoUpdate, isMobile = false
           paddingLeft: '20px'
         }}>
           <li>请填写真实的姓名和班级信息</li>
-          <li>头像链接是可选的，可以留空</li>
           <li>信息修改后会自动保存到本地</li>
           <li>建议使用真实姓名以便其他用户识别</li>
         </ul>

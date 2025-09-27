@@ -3,14 +3,14 @@ import { useUserID } from './UserIDManager';
 import api from '../api';
 
 export default function UserSync({ onBack, isMobile = false }) {
-  const { userID, isLoading: userIDLoading } = useUserID();
+  const { userID, isLoading: userIDLoading, importUserID, exportUserID } = useUserID();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [userInfo, setUserInfo] = useState(null);
+  const [importID, setImportID] = useState('');
   const [formData, setFormData] = useState({
     name: '',
-    class: '',
-    avatar: ''
+    class: ''
   });
 
   const mobileStyles = {
@@ -57,8 +57,7 @@ export default function UserSync({ onBack, isMobile = false }) {
         setUserInfo(parsedInfo);
         setFormData({
           name: parsedInfo.name || '',
-          class: parsedInfo.class || '',
-          avatar: parsedInfo.avatar || ''
+          class: parsedInfo.class || ''
         });
       }
     } catch (error) {
@@ -92,12 +91,11 @@ export default function UserSync({ onBack, isMobile = false }) {
       }
 
       // 同步到服务器
-      const response = await api.user.sync({
-        userID: userID,
-        name: formData.name.trim(),
-        class: formData.class.trim(),
-        avatar: formData.avatar.trim()
-      });
+      const response = await api.user.sync(
+        userID,
+        formData.name.trim(),
+        formData.class.trim()
+      );
 
       if (response.success) {
         // 更新本地存储
@@ -105,7 +103,6 @@ export default function UserSync({ onBack, isMobile = false }) {
           userID: userID,
           name: formData.name.trim(),
           class: formData.class.trim(),
-          avatar: formData.avatar.trim(),
           role: response.user.role,
           isAdmin: response.user.isAdmin
         };
@@ -136,8 +133,7 @@ export default function UserSync({ onBack, isMobile = false }) {
       setUserInfo(response);
       setFormData({
         name: response.name || '',
-        class: response.class || '',
-        avatar: response.avatar || ''
+        class: response.class || ''
       });
       setMessage('已从服务器获取最新用户信息');
     } catch (error) {
@@ -145,6 +141,59 @@ export default function UserSync({ onBack, isMobile = false }) {
       setMessage('未找到服务器用户信息，请先同步');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 导入用户ID
+  const handleImport = async () => {
+    if (!importID.trim()) {
+      setMessage('请输入要导入的用户ID');
+      return;
+    }
+
+    try {
+      setMessage('正在验证用户ID并导入用户信息...');
+      setLoading(true);
+      
+      // 先验证用户ID是否存在
+      const userData = await api.user.get(importID.trim());
+      
+      if (!userData || !userData.name || !userData.class) {
+        setMessage('该用户ID不存在或信息不完整，请检查ID是否正确');
+        return;
+      }
+      
+      // 验证通过后导入
+      await importUserID(importID.trim());
+      setMessage(`用户ID导入成功！已绑定到用户：${userData.name} (${userData.class})。页面将自动刷新以显示最新信息。`);
+      setImportID('');
+      
+      // 延迟刷新页面，让用户看到成功消息
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      if (error.message.includes('404')) {
+        setMessage('该用户ID不存在，请检查ID是否正确');
+      } else {
+        setMessage('导入失败：' + error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 导出用户ID
+  const handleExport = () => {
+    try {
+      const exportedID = exportUserID();
+      navigator.clipboard.writeText(exportedID).then(() => {
+        setMessage('用户ID已复制到剪贴板！');
+      }).catch(() => {
+        setMessage('用户ID：' + exportedID);
+      });
+    } catch (error) {
+      setMessage('导出失败：' + error.message);
     }
   };
 
@@ -219,6 +268,107 @@ export default function UserSync({ onBack, isMobile = false }) {
           border: '1px solid #dee2e6'
         }}>
           {userIDLoading ? '生成中...' : userID || '未生成'}
+        </div>
+      </div>
+
+      {/* ID导入导出功能 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+        padding: isMobile ? '20px' : '30px',
+        marginBottom: '20px',
+        '-webkit-transform': 'translateZ(0)',
+        transform: 'translateZ(0)',
+        '-webkit-backface-visibility': 'hidden',
+        backfaceVisibility: 'hidden'
+      }}>
+        <h3 style={{
+          fontSize: isMobile ? '18px' : '20px',
+          color: '#2c3e50',
+          marginBottom: '15px',
+          textAlign: 'center'
+        }}>
+          跨设备同步
+        </h3>
+
+        {/* 导出功能 */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: '500',
+            color: '#2c3e50',
+            fontSize: isMobile ? '16px' : '14px'
+          }}>
+            导出用户ID（用于其他设备）
+          </label>
+          <button
+            onClick={handleExport}
+            style={{
+              width: '100%',
+              padding: isMobile ? '14px' : '12px',
+              background: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: isMobile ? '16px' : '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s ease'
+            }}
+            onMouseOver={(e) => e.target.style.background = '#218838'}
+            onMouseOut={(e) => e.target.style.background = '#28a745'}
+          >
+            复制用户ID
+          </button>
+        </div>
+
+        {/* 导入功能 */}
+        <div>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: '500',
+            color: '#2c3e50',
+            fontSize: isMobile ? '16px' : '14px'
+          }}>
+            导入用户ID（从其他设备）
+          </label>
+          <input
+            type="text"
+            value={importID}
+            onChange={(e) => setImportID(e.target.value)}
+            placeholder="粘贴其他设备的用户ID"
+            style={{
+              width: '100%',
+              padding: isMobile ? '14px' : '12px',
+              border: '2px solid #e9ecef',
+              borderRadius: '8px',
+              fontSize: isMobile ? '16px' : '14px',
+              boxSizing: 'border-box',
+              transition: 'border-color 0.3s ease',
+              marginBottom: '10px'
+            }}
+          />
+          <button
+            onClick={handleImport}
+            disabled={loading || !importID.trim()}
+            style={{
+              width: '100%',
+              padding: isMobile ? '14px' : '12px',
+              background: loading || !importID.trim() ? '#6c757d' : '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: isMobile ? '16px' : '14px',
+              fontWeight: '500',
+              cursor: loading || !importID.trim() ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.3s ease'
+            }}
+          >
+            {loading ? '导入中...' : '导入用户ID'}
+          </button>
         </div>
       </div>
 
@@ -299,30 +449,6 @@ export default function UserSync({ onBack, isMobile = false }) {
           </div>
 
           <div style={{ marginBottom: '30px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontWeight: '500',
-              color: '#2c3e50',
-              fontSize: isMobile ? '16px' : '14px'
-            }}>
-              头像链接
-            </label>
-            <input
-              type="url"
-              value={formData.avatar}
-              onChange={(e) => setFormData(prev => ({ ...prev, avatar: e.target.value }))}
-              placeholder="头像图片链接（可选）"
-              style={{
-                width: '100%',
-                padding: isMobile ? '14px' : '12px',
-                border: '2px solid #e9ecef',
-                borderRadius: '8px',
-                fontSize: isMobile ? '16px' : '14px',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.3s ease'
-              }}
-            />
           </div>
 
           {/* 同步按钮 */}
@@ -414,7 +540,6 @@ export default function UserSync({ onBack, isMobile = false }) {
           <li>数据同步会将您的信息保存到服务器</li>
           <li>姓名一旦设置，通常不能修改（除非未被其他用户使用）</li>
           <li>建议使用真实姓名以便其他用户识别</li>
-          <li>头像链接是可选的，可以留空</li>
           <li>本地数据会与服务器数据保持同步</li>
         </ul>
       </div>

@@ -3,24 +3,23 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // 创建UserID上下文
 const UserIDContext = createContext();
 
-// 生成唯一用户ID的函数
+// 生成唯一用户ID的函数（纯数字）
 const generateUserID = () => {
-  // 使用时间戳和随机数生成唯一ID
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 9);
-  return `user_${timestamp}_${random}`;
+  const timestamp = Date.now();
+  const randomPart = Math.floor(Math.random() * 1000000);
+  return `${timestamp}${randomPart}`;
 };
 
 // 获取或创建用户ID的函数
 const getOrCreateUserID = () => {
   try {
-    // 尝试从localStorage获取用户ID
-    let userID = localStorage.getItem('user_id');
+    // 尝试从localStorage获取用户ID（与原版一致）
+    let userID = localStorage.getItem('user_unique_id');
     
     if (!userID) {
       // 如果没有用户ID，生成一个新的
       userID = generateUserID();
-      localStorage.setItem('user_id', userID);
+      localStorage.setItem('user_unique_id', userID);
       console.log('生成新的用户ID:', userID);
     } else {
       console.log('使用现有用户ID:', userID);
@@ -59,7 +58,7 @@ export const UserIDProvider = ({ children }) => {
   // 更新用户ID的函数
   const updateUserID = (newUserID) => {
     try {
-      localStorage.setItem('user_id', newUserID);
+      localStorage.setItem('user_unique_id', newUserID);
       setUserID(newUserID);
       console.log('用户ID已更新:', newUserID);
     } catch (error) {
@@ -71,7 +70,7 @@ export const UserIDProvider = ({ children }) => {
   const resetUserID = () => {
     try {
       const newUserID = generateUserID();
-      localStorage.setItem('user_id', newUserID);
+      localStorage.setItem('user_unique_id', newUserID);
       setUserID(newUserID);
       console.log('用户ID已重置:', newUserID);
       return newUserID;
@@ -84,7 +83,7 @@ export const UserIDProvider = ({ children }) => {
   // 清除用户ID的函数
   const clearUserID = () => {
     try {
-      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_unique_id');
       setUserID(null);
       console.log('用户ID已清除');
     } catch (error) {
@@ -92,12 +91,68 @@ export const UserIDProvider = ({ children }) => {
     }
   };
 
+  // 导入用户ID（用于跨设备同步）
+  const importUserID = async (importedID) => {
+    if (!importedID || typeof importedID !== 'string') {
+      throw new Error('无效的用户ID格式');
+    }
+
+    try {
+      localStorage.setItem('user_unique_id', importedID);
+      setUserID(importedID);
+      console.log('用户ID已导入:', importedID);
+      
+      // 尝试从服务器获取用户信息
+      try {
+        const api = (await import('../api')).default;
+        const userData = await api.user.get(importedID);
+        
+        // 如果获取到用户信息，保存到本地存储
+        if (userData && userData.name && userData.class) {
+          const userProfile = {
+            name: userData.name,
+            class: userData.class
+          };
+          localStorage.setItem('user_profile', JSON.stringify(userProfile));
+          localStorage.setItem('name_edited', 'true'); // 标记为已编辑，避免重复填写
+          
+          // 触发storage事件，通知其他组件更新
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'user_profile',
+            newValue: JSON.stringify(userProfile),
+            oldValue: null
+          }));
+          
+          console.log('用户信息已自动导入:', userProfile);
+        }
+      } catch (apiError) {
+        console.log('无法从服务器获取用户信息，用户需要手动填写:', apiError.message);
+        // 不抛出错误，让用户手动填写信息
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('导入用户ID失败:', error);
+      throw error;
+    }
+  };
+
+  // 导出用户ID（用于跨设备同步）
+  const exportUserID = () => {
+    if (!userID) {
+      throw new Error('没有可导出的用户ID');
+    }
+    return userID;
+  };
+
   const value = {
     userID,
     isLoading,
     updateUserID,
     resetUserID,
-    clearUserID
+    clearUserID,
+    importUserID,
+    exportUserID
   };
 
   return (

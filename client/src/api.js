@@ -5,11 +5,11 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
 const api = {
   // User related APIs
   user: {
-    sync: async (userID, name, userClass, avatar) => {
+    sync: async (userID, name, userClass) => {
       const response = await fetch(`${API_BASE_URL}/user/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userID, name, class: userClass, avatar })
+        body: JSON.stringify({ userID, name, class: userClass })
       });
       return response.json();
     },
