@@ -116,7 +116,7 @@ export default function Portfolio({ userInfo, isAdmin, onBack, isMobile = false 
       return;
     }
 
-    if (!confirm('确定要删除这个作品集吗？')) {
+    if (!window.confirm('确定要删除这个作品集吗？')) {
       return;
     }
 

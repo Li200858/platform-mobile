@@ -141,7 +141,7 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack, isMobile = 
       return;
     }
 
-    if (!confirm('确定要删除这个资源吗？')) {
+    if (!window.confirm('确定要删除这个资源吗？')) {
       return;
     }
 

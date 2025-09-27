@@ -294,7 +294,7 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
       return;
     }
 
-    if (!confirm('确定要删除这个作品吗？')) {
+    if (!window.confirm('确定要删除这个作品吗？')) {
       return;
     }
 
@@ -318,7 +318,7 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
       return;
     }
 
-    if (!confirm('确定要删除这条评论吗？')) {
+    if (!window.confirm('确定要删除这条评论吗？')) {
       return;
     }
 

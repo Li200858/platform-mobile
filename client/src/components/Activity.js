@@ -277,7 +277,7 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus,
             {(activity.authorName === userInfo?.name || isAdmin) && (
               <button
                 onClick={async () => {
-                  if (!confirm('确定要删除这个活动吗？')) return;
+                  if (!window.confirm('确定要删除这个活动吗？')) return;
                   try {
                     await api.activity.delete(activity._id, userInfo?.name, isAdmin);
                     setMessage('删除成功');

@@ -55,7 +55,7 @@ export default function MyWorks({ userInfo, onBack, isMobile = false }) {
       return;
     }
 
-    if (!confirm('确定要删除这个作品吗？删除后无法恢复。')) {
+    if (!window.confirm('确定要删除这个作品吗？删除后无法恢复。')) {
       return;
     }
 
