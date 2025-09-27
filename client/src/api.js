@@ -127,16 +127,46 @@ const api = {
       return response.json();
     },
     getMyWorks: async (authorName) => {
-      const response = await fetch(`${API_BASE_URL}/art/my-works?authorName=${encodeURIComponent(authorName)}`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/art/my-works?authorName=${encodeURIComponent(authorName)}`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载我的作品失败:', error);
+        throw error;
+      }
     },
     getFavorites: async (authorName) => {
-      const response = await fetch(`${API_BASE_URL}/art/favorites?authorName=${encodeURIComponent(authorName)}`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/art/favorites?authorName=${encodeURIComponent(authorName)}`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载收藏失败:', error);
+        throw error;
+      }
     },
     getMyFavorites: async (authorName) => {
-      const response = await fetch(`${API_BASE_URL}/art/favorites?authorName=${encodeURIComponent(authorName)}`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/art/favorites?authorName=${encodeURIComponent(authorName)}`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载收藏失败:', error);
+        throw error;
+      }
     },
     getLikes: async (authorName) => {
       const response = await fetch(`${API_BASE_URL}/art/likes?authorName=${encodeURIComponent(authorName)}`);
@@ -389,12 +419,32 @@ const api = {
       return response.json();
     },
     getUserPortfolios: async (username) => {
-      const response = await fetch(`${API_BASE_URL}/portfolio/user/${encodeURIComponent(username)}`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/portfolio/user/${encodeURIComponent(username)}`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载用户作品集失败:', error);
+        throw error;
+      }
     },
     getPublicPortfolios: async () => {
-      const response = await fetch(`${API_BASE_URL}/portfolio/public`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/portfolio/public`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载公开作品集失败:', error);
+        throw error;
+      }
     },
     getPortfolioDetail: async (id) => {
       const response = await fetch(`${API_BASE_URL}/portfolio/${id}`);
@@ -440,22 +490,49 @@ const api = {
   // Resource Library APIs
   resources: {
     getAll: async () => {
-      const response = await fetch(`${API_BASE_URL}/resources`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/resources`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载资料失败:', error);
+        throw error;
+      }
     },
     getCategories: async () => {
-      const response = await fetch(`${API_BASE_URL}/resources/categories`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/resources/categories`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载分类失败:', error);
+        throw error;
+      }
     },
     upload: async (formData) => {
-      const response = await fetch(`${API_BASE_URL}/resources/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      try {
+        const response = await fetch(`${API_BASE_URL}/resources/upload`, {
+          method: 'POST',
+          body: formData,
+          timeout: 30000 // 30秒超时
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: '上传失败' }));
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('上传资料失败:', error);
+        throw error;
       }
-      return response.json();
     },
     delete: async (id, authorName, isAdmin) => {
       const response = await fetch(`${API_BASE_URL}/resources/${id}?authorName=${encodeURIComponent(authorName)}&isAdmin=${isAdmin}`, {
@@ -483,8 +560,18 @@ const api = {
   // Activity related APIs
   activity: {
     getAll: async () => {
-      const response = await fetch(`${API_BASE_URL}/activities`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/activities`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载活动失败:', error);
+        throw error;
+      }
     },
     create: async (data) => {
       const response = await fetch(`${API_BASE_URL}/activities`, {

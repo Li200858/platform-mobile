@@ -646,11 +646,16 @@ app.delete('/api/art/:id', async (req, res) => {
 // 活动相关API
 app.get('/api/activities', async (req, res) => {
   try {
-    const activities = await Activity.find().sort({ createdAt: -1 });
+    console.log('获取活动请求');
+    const activities = await Activity.find()
+      .sort({ createdAt: -1 })
+      .limit(100); // 限制返回数量，提高性能
+    
+    console.log(`获取到 ${activities.length} 个活动`);
     res.json(activities);
   } catch (error) {
     console.error('获取活动失败:', error);
-    res.status(500).json({ error: '获取活动失败' });
+    res.status(500).json({ error: '获取活动失败: ' + error.message });
   }
 });
 
@@ -1845,14 +1850,17 @@ app.get('/api/portfolio/user/:username', async (req, res) => {
 // 获取所有公开作品集
 app.get('/api/portfolio/public', async (req, res) => {
   try {
+    console.log('获取公开作品集请求');
     const portfolios = await Portfolio.find({ isPublic: true })
       .populate('works', 'title content media authorName authorClass createdAt')
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .limit(50); // 限制返回数量，提高性能
     
+    console.log(`获取到 ${portfolios.length} 个公开作品集`);
     res.json(portfolios);
   } catch (error) {
     console.error('获取公开作品集失败:', error);
-    res.status(500).json({ error: '获取公开作品集失败' });
+    res.status(500).json({ error: '获取公开作品集失败: ' + error.message });
   }
 });
 
@@ -2045,13 +2053,16 @@ app.post('/api/portfolio/upload-content', upload.array('files'), async (req, res
 // 获取所有资料
 app.get('/api/resources', async (req, res) => {
   try {
+    console.log('获取资料请求');
     const resources = await Resource.find({ isPublic: true })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(100); // 限制返回数量，提高性能
     
+    console.log(`获取到 ${resources.length} 个资料`);
     res.json(resources);
   } catch (error) {
     console.error('获取资料失败:', error);
-    res.status(500).json({ error: '获取资料失败' });
+    res.status(500).json({ error: '获取资料失败: ' + error.message });
   }
 });
 
@@ -2068,13 +2079,20 @@ app.get('/api/resources/categories', async (req, res) => {
 
 // 上传资料
 app.post('/api/resources/upload', upload.array('files'), async (req, res) => {
+  console.log('收到资料上传请求:', {
+    body: req.body,
+    files: req.files ? req.files.map(f => ({ name: f.originalname, size: f.size })) : 'no files'
+  });
+  
   const { title, description, category, tags, isPublic, uploader } = req.body;
   
   if (!title || !uploader) {
+    console.error('上传资料失败: 缺少必要信息', { title, uploader });
     return res.status(400).json({ error: '请填写资料标题和上传者信息' });
   }
 
   if (!req.files || req.files.length === 0) {
+    console.error('上传资料失败: 没有文件');
     return res.status(400).json({ error: '请选择要上传的文件' });
   }
 
@@ -2088,23 +2106,27 @@ app.post('/api/resources/upload', upload.array('files'), async (req, res) => {
       url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`
     }));
 
-    console.log('上传的文件信息:', files);
+    console.log('处理文件信息:', files);
 
-    const resource = await Resource.create({
+    const resourceData = {
       title,
       description: description || '',
       category: category || 'template',
-      tags: tags ? JSON.parse(tags) : [],
+      tags: tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [],
       uploader,
       isPublic: isPublic !== 'false',
       files
-    });
+    };
+
+    console.log('创建资源数据:', resourceData);
+
+    const resource = await Resource.create(resourceData);
 
     console.log('资料创建成功:', resource._id);
     res.json(resource);
   } catch (error) {
     console.error('上传资料失败:', error);
-    res.status(500).json({ error: '上传资料失败' });
+    res.status(500).json({ error: '上传资料失败: ' + error.message });
   }
 });
 
