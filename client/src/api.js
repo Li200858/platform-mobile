@@ -258,97 +258,6 @@ const api = {
     }
   },
 
-  // Admin related APIs
-  admin: {
-    check: async (userName) => {
-      const response = await fetch(`${API_BASE_URL}/admin/check?userName=${encodeURIComponent(userName)}`);
-      return response.json();
-    },
-    getFeedback: async () => {
-      const response = await fetch(`${API_BASE_URL}/admin/feedback`);
-      return response.json();
-    },
-    getFeedbacks: async () => {
-      const response = await fetch(`${API_BASE_URL}/admin/feedback`);
-      return response.json();
-    },
-    getFeedbackDetail: async (id) => {
-      const response = await fetch(`${API_BASE_URL}/admin/feedback/${id}`);
-      return response.json();
-    },
-    replyFeedback: async (id, replyData) => {
-      const response = await fetch(`${API_BASE_URL}/admin/feedback/${id}/reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(replyData)
-      });
-      return response.json();
-    },
-    markFeedbackReceived: async (id) => {
-      const response = await fetch(`${API_BASE_URL}/admin/feedback/${id}/received`, {
-        method: 'POST'
-      });
-      return response.json();
-    },
-    getUsers: async () => {
-      const response = await fetch(`${API_BASE_URL}/admin/users`);
-      return response.json();
-    },
-    getAdmins: async () => {
-      const response = await fetch(`${API_BASE_URL}/admin/users`);
-      return response.json();
-    },
-    searchUsers: async (query) => {
-      const response = await fetch(`${API_BASE_URL}/admin/search-users?q=${encodeURIComponent(query)}`);
-      return response.json();
-    },
-    addAdmin: async (userName, addedBy) => {
-      const response = await fetch(`${API_BASE_URL}/admin/add-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userName, addedBy })
-      });
-      return response.json();
-    },
-    removeAdmin: async (userName, removedBy) => {
-      const response = await fetch(`${API_BASE_URL}/admin/remove-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userName, removedBy })
-      });
-      return response.json();
-    },
-    setSuperAdmin: async (targetUserName, setByUserName) => {
-      const response = await fetch(`${API_BASE_URL}/admin/set-super-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserName, setByUserName })
-      });
-      return response.json();
-    },
-    removeSuperAdmin: async (targetUserName, setByUserName) => {
-      const response = await fetch(`${API_BASE_URL}/admin/remove-super-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserName, setByUserName })
-      });
-      return response.json();
-    },
-    cleanupFiles: async () => {
-      const response = await fetch(`${API_BASE_URL}/admin/cleanup-files`, {
-        method: 'POST'
-      });
-      return response.json();
-    },
-    testFileDelete: async (filePath) => {
-      const response = await fetch(`${API_BASE_URL}/admin/test-file-delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filePath })
-      });
-      return response.json();
-    }
-  },
 
   // Maintenance mode APIs
   maintenance: {
@@ -664,8 +573,8 @@ const api = {
 
   // Admin related APIs
   admin: {
-    check: async (username) => {
-      const response = await fetch(`${API_BASE_URL}/admin/check?username=${encodeURIComponent(username)}`);
+    check: async (userName) => {
+      const response = await fetch(`${API_BASE_URL}/admin/check?userName=${encodeURIComponent(userName)}`);
       return response.json();
     },
     getFeedbacks: async () => {

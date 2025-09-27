@@ -2241,30 +2241,6 @@ app.get('/api/debug/files', (req, res) => {
   }
 });
 
-// 管理员权限检查API
-app.get('/api/admin/check', async (req, res) => {
-  const { username } = req.query;
-  
-  if (!username) {
-    return res.status(400).json({ error: '用户名不能为空' });
-  }
-  
-  try {
-    const user = await User.findOne({ name: username });
-    if (!user) {
-      return res.status(404).json({ error: '用户不存在' });
-    }
-    
-    res.json({
-      isAdmin: user.isAdmin || false,
-      isSuperAdmin: user.isSuperAdmin || false,
-      isInitial: user.isInitial || false
-    });
-  } catch (error) {
-    console.error('检查管理员权限失败:', error);
-    res.status(500).json({ error: '检查管理员权限失败' });
-  }
-});
 
 // 获取所有用户
 app.get('/api/admin/users', async (req, res) => {
