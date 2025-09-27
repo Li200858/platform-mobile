@@ -2218,3 +2218,175 @@ app.get('/api/debug/files', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// 管理员权限检查API
+app.get('/api/admin/check', async (req, res) => {
+  const { username } = req.query;
+  
+  if (!username) {
+    return res.status(400).json({ error: '用户名不能为空' });
+  }
+  
+  try {
+    const user = await User.findOne({ name: username });
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+    
+    res.json({
+      isAdmin: user.isAdmin || false,
+      isSuperAdmin: user.isSuperAdmin || false,
+      isInitial: user.isInitial || false
+    });
+  } catch (error) {
+    console.error('检查管理员权限失败:', error);
+    res.status(500).json({ error: '检查管理员权限失败' });
+  }
+});
+
+// 获取所有用户
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    console.error('获取用户列表失败:', error);
+    res.status(500).json({ error: '获取用户列表失败' });
+  }
+});
+
+// 搜索用户
+app.get('/api/admin/users/search', async (req, res) => {
+  const { q } = req.query;
+  
+  if (!q) {
+    return res.status(400).json({ error: '搜索关键词不能为空' });
+  }
+  
+  try {
+    const users = await User.find({
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { class: { $regex: q, $options: 'i' } }
+      ]
+    }).sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    console.error('搜索用户失败:', error);
+    res.status(500).json({ error: '搜索用户失败' });
+  }
+});
+
+// 添加管理员
+app.post('/api/admin/add-admin', async (req, res) => {
+  const { targetUserName, setByUserName } = req.body;
+  
+  if (!targetUserName || !setByUserName) {
+    return res.status(400).json({ error: '参数不完整' });
+  }
+  
+  try {
+    // 检查操作者权限
+    const operator = await User.findOne({ name: setByUserName });
+    if (!operator || !operator.isSuperAdmin) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+    
+    const targetUser = await User.findOne({ name: targetUserName });
+    if (!targetUser) {
+      return res.status(404).json({ error: '目标用户不存在' });
+    }
+    
+    targetUser.isAdmin = true;
+    await targetUser.save();
+    
+    res.json({ message: '管理员权限设置成功' });
+  } catch (error) {
+    console.error('设置管理员权限失败:', error);
+    res.status(500).json({ error: '设置管理员权限失败' });
+  }
+});
+
+// 移除管理员
+app.post('/api/admin/remove-admin', async (req, res) => {
+  const { targetUserName, setByUserName } = req.body;
+  
+  if (!targetUserName || !setByUserName) {
+    return res.status(400).json({ error: '参数不完整' });
+  }
+  
+  try {
+    // 检查操作者权限
+    const operator = await User.findOne({ name: setByUserName });
+    if (!operator || !operator.isSuperAdmin) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+    
+    const targetUser = await User.findOne({ name: targetUserName });
+    if (!targetUser) {
+      return res.status(404).json({ error: '目标用户不存在' });
+    }
+    
+    targetUser.isAdmin = false;
+    await targetUser.save();
+    
+    res.json({ message: '管理员权限移除成功' });
+  } catch (error) {
+    console.error('移除管理员权限失败:', error);
+    res.status(500).json({ error: '移除管理员权限失败' });
+  }
+});
+
+// 通知相关API
+app.get('/api/notifications', async (req, res) => {
+  const { username } = req.query;
+  
+  if (!username) {
+    return res.status(400).json({ error: '用户名不能为空' });
+  }
+  
+  try {
+    const notifications = await Notification.find({ username }).sort({ createdAt: -1 });
+    res.json(notifications);
+  } catch (error) {
+    console.error('获取通知失败:', error);
+    res.status(500).json({ error: '获取通知失败' });
+  }
+});
+
+// 标记通知为已读
+app.post('/api/notifications/:id/read', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const notification = await Notification.findById(id);
+    if (!notification) {
+      return res.status(404).json({ error: '通知不存在' });
+    }
+    
+    notification.isRead = true;
+    await notification.save();
+    
+    res.json({ message: '通知已标记为已读' });
+  } catch (error) {
+    console.error('标记通知已读失败:', error);
+    res.status(500).json({ error: '标记通知已读失败' });
+  }
+});
+
+// 标记所有通知为已读
+app.post('/api/notifications/read-all', async (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.status(400).json({ error: '用户名不能为空' });
+  }
+  
+  try {
+    await Notification.updateMany({ username }, { isRead: true });
+    res.json({ message: '所有通知已标记为已读' });
+  } catch (error) {
+    console.error('标记所有通知已读失败:', error);
+    res.status(500).json({ error: '标记所有通知已读失败' });
+  }
+});

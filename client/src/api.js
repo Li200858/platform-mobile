@@ -25,6 +25,10 @@ const api = {
       const response = await fetch(`${API_BASE_URL}/user/${userID}`);
       return response.json();
     },
+    getInfo: async (userID) => {
+      const response = await fetch(`${API_BASE_URL}/user/${userID}`);
+      return response.json();
+    },
     searchUsers: async (query) => {
       const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`);
       return response.json();
@@ -564,6 +568,104 @@ const api = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.json();
+  },
+
+  // Admin related APIs
+  admin: {
+    check: async (username) => {
+      const response = await fetch(`${API_BASE_URL}/admin/check?username=${encodeURIComponent(username)}`);
+      return response.json();
+    },
+    getFeedbacks: async () => {
+      const response = await fetch(`${API_BASE_URL}/admin/feedback`);
+      return response.json();
+    },
+    getUsers: async () => {
+      const response = await fetch(`${API_BASE_URL}/admin/users`);
+      return response.json();
+    },
+    searchUsers: async (query) => {
+      const response = await fetch(`${API_BASE_URL}/admin/users/search?q=${encodeURIComponent(query)}`);
+      return response.json();
+    },
+    addAdmin: async (username, operatorName) => {
+      const response = await fetch(`${API_BASE_URL}/admin/add-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserName: username, setByUserName: operatorName })
+      });
+      return response.json();
+    },
+    removeAdmin: async (username, operatorName) => {
+      const response = await fetch(`${API_BASE_URL}/admin/remove-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserName: username, setByUserName: operatorName })
+      });
+      return response.json();
+    },
+    setSuperAdmin: async (username, operatorName) => {
+      const response = await fetch(`${API_BASE_URL}/admin/set-super-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserName: username, setByUserName: operatorName })
+      });
+      return response.json();
+    },
+    removeSuperAdmin: async (username, operatorName) => {
+      const response = await fetch(`${API_BASE_URL}/admin/remove-super-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserName: username, setByUserName: operatorName })
+      });
+      return response.json();
+    },
+    getFeedbackDetail: async (feedbackId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/feedback/${feedbackId}`);
+      return response.json();
+    },
+    replyFeedback: async (feedbackId, replyData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/feedback/${feedbackId}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(replyData)
+      });
+      return response.json();
+    },
+    markFeedbackReceived: async (feedbackId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/feedback/${feedbackId}/received`, {
+        method: 'POST'
+      });
+      return response.json();
+    },
+    cleanupFiles: async () => {
+      const response = await fetch(`${API_BASE_URL}/admin/cleanup-files`, {
+        method: 'POST'
+      });
+      return response.json();
+    }
+  },
+
+  // Notifications related APIs
+  notifications: {
+    getNotifications: async (username) => {
+      const response = await fetch(`${API_BASE_URL}/notifications?username=${encodeURIComponent(username)}`);
+      return response.json();
+    },
+    markAsRead: async (notificationId) => {
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: 'POST'
+      });
+      return response.json();
+    },
+    markAllAsRead: async (username) => {
+      const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      return response.json();
+    }
   }
 };
 
