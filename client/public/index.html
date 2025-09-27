@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#667eea" />
+    
+    <!-- iPad Safari优化 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="艺术平台">
+    
+    <!-- 移动端优化 -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- SEO优化 -->
+    <meta name="description" content="海淀外国语国际部艺术平台 - 移动端版本，专为iPad Safari优化" />
+    <meta name="keywords" content="艺术,校园,作品,展示,移动端,iPad" />
+    <meta name="author" content="HFLS International Art Platform" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="海淀外国语国际部艺术平台 - 移动端" />
+    <meta property="og:description" content="专为iPad Safari优化的校园艺术展示平台" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="海淀外国语国际部艺术平台 - 移动端" />
+    <meta name="twitter:description" content="专为iPad Safari优化的校园艺术展示平台" />
+    <meta name="twitter:image" content="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- 预加载关键资源 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- 苹果设备图标 -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- 清单文件 -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- 安全策略 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:;">
+    
+    <!-- iPad Safari兼容性修复样式 -->
+    <style>
+      /* 防止iOS缩放 */
+      input, textarea, select {
+        font-size: 16px !important;
+      }
+      
+      /* 全浏览器渲染修复 */
+      body {
+        -webkit-transform: translateZ(0);
+        -moz-transform: translateZ(0);
+        -ms-transform: translateZ(0);
+        -o-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        -ms-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -webkit-perspective: 1000px;
+        -moz-perspective: 1000px;
+        -ms-perspective: 1000px;
+        perspective: 1000px;
+      }
+      
+      #root {
+        -webkit-transform: translateZ(0);
+        -moz-transform: translateZ(0);
+        -ms-transform: translateZ(0);
+        -o-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        -ms-backface-visibility: hidden;
+        backface-visibility: hidden;
+        min-height: 100vh;
+        width: 100%;
+        display: block;
+        visibility: visible;
+        opacity: 1;
+      }
+      
+      /* 全浏览器触摸优化 */
+      * {
+        -webkit-tap-highlight-color: transparent;
+        -moz-tap-highlight-color: transparent;
+        -ms-tap-highlight-color: transparent;
+        tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -moz-touch-callout: none;
+        -ms-touch-callout: none;
+        touch-callout: none;
+      }
+      
+      /* 全浏览器防止双击缩放 */
+      * {
+        -webkit-touch-action: manipulation;
+        -moz-touch-action: manipulation;
+        -ms-touch-action: manipulation;
+        touch-action: manipulation;
+      }
+      
+      /* 全浏览器滚动优化 */
+      body {
+        -webkit-overflow-scrolling: touch;
+        -moz-overflow-scrolling: touch;
+        -ms-overflow-scrolling: touch;
+        overflow-scrolling: touch;
+      }
+      
+      /* Firefox 特殊修复 */
+      @-moz-document url-prefix() {
+        body {
+          -moz-user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+        }
+        input, textarea {
+          -moz-user-select: text;
+          -webkit-user-select: text;
+          -ms-user-select: text;
+          user-select: text;
+        }
+      }
+      
+      /* Edge 特殊修复 */
+      @supports (-ms-ime-align: auto) {
+        body {
+          -ms-touch-action: manipulation;
+          -ms-user-select: none;
+          user-select: none;
+        }
+        input, textarea {
+          -ms-user-select: text;
+          user-select: text;
+        }
+      }
+      
+      /* Opera 特殊修复 */
+      @media screen and (-webkit-min-device-pixel-ratio: 0) {
+        _::-webkit-full-page-media, _:future, :root body {
+          -webkit-transform: translateZ(0);
+          transform: translateZ(0);
+        }
+      }
+      
+      /* 加载动画 */
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      
+      .loading-text {
+        font-size: 18px;
+        font-weight: 500;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* 隐藏加载屏幕 */
+      .loaded .loading-screen {
+        display: none;
+      }
+      
+      /* 移动端优化 */
+      @media (max-width: 768px) {
+        .loading-text {
+          font-size: 16px;
+        }
+        
+        .loading-spinner {
+          width: 32px;
+          height: 32px;
+        }
+      }
+    </style>
+    
+    <title>海淀外国语国际部艺术平台 - 移动端</title>
+  </head>
+  <body>
+    <noscript>
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        text-align: center;
+        padding: 20px;
+      ">
+        <h1 style="margin-bottom: 20px; font-size: 24px;">需要启用JavaScript</h1>
+        <p style="font-size: 16px; line-height: 1.5;">
+          此应用需要JavaScript才能正常运行。<br>
+          请在浏览器设置中启用JavaScript，然后刷新页面。
+        </p>
+      </div>
+    </noscript>
+    
+    <!-- 加载屏幕 -->
+    <div class="loading-screen" id="loading-screen">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">正在加载艺术平台...</div>
+    </div>
+    
+    <div id="root"></div>
+    
+    <!-- 全浏览器兼容性修复脚本 -->
+    <script>
+      // 浏览器检测和兼容性修复
+      (function() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        
+        // 浏览器检测
+        const browserInfo = {
+          isIOS: /iphone|ipad|ipod/i.test(userAgent),
+          isAndroid: /android/i.test(userAgent),
+          isChrome: /chrome/i.test(userAgent),
+          isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
+          isFirefox: /firefox/i.test(userAgent),
+          isEdge: /edge/i.test(userAgent),
+          isOpera: /opera|opr/i.test(userAgent),
+          isSamsung: /samsung/i.test(userAgent),
+          isMobile: /mobile|android|iphone|ipad|phone/i.test(userAgent),
+          isIPad: /ipad/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+          isIPhone: /iphone/i.test(userAgent),
+          isTablet: /tablet|ipad/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        };
+        
+        console.log('浏览器信息:', browserInfo);
+        
+        // 通用移动端修复
+        if (browserInfo.isMobile || browserInfo.isTablet) {
+          console.log('检测到移动设备，应用通用移动端修复');
+          
+          // 立即应用基础修复
+          document.documentElement.style.webkitTransform = 'translateZ(0)';
+          document.documentElement.style.transform = 'translateZ(0)';
+          document.documentElement.style.webkitBackfaceVisibility = 'hidden';
+          document.documentElement.style.backfaceVisibility = 'hidden';
+          document.documentElement.style.webkitPerspective = '1000px';
+          document.documentElement.style.perspective = '1000px';
+          
+          // 设置视口元标签
+          const viewport = document.querySelector('meta[name="viewport"]');
+          if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+          }
+          
+          // 防止双击缩放
+          let lastTouchEnd = 0;
+          document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+              event.preventDefault();
+            }
+            lastTouchEnd = now;
+          }, false);
+          
+          // 防止长按选择文本
+          document.addEventListener('selectstart', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+              e.preventDefault();
+            }
+          });
+          
+          // 防止拖拽
+          document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+          });
+        }
+        
+        // iOS Safari 特殊修复
+        if (browserInfo.isIOS && browserInfo.isSafari) {
+          console.log('检测到iOS Safari，应用特殊修复');
+          
+          // iOS Safari 渲染修复
+          document.addEventListener('DOMContentLoaded', function() {
+            document.body.style.webkitTransform = 'translateZ(0)';
+            document.body.style.transform = 'translateZ(0)';
+            
+            // 强制重绘
+            setTimeout(function() {
+              document.body.style.display = 'none';
+              document.body.offsetHeight; // 触发重绘
+              document.body.style.display = '';
+            }, 0);
+          });
+          
+          // iOS Safari 滚动修复
+          document.addEventListener('touchmove', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+              e.preventDefault();
+            }
+          }, { passive: false });
+        }
+        
+        // Android Chrome 特殊修复
+        if (browserInfo.isAndroid && browserInfo.isChrome) {
+          console.log('检测到Android Chrome，应用特殊修复');
+          
+          // Android Chrome 滚动修复
+          document.addEventListener('touchstart', function() {}, { passive: true });
+          document.addEventListener('touchmove', function() {}, { passive: true });
+          
+          // Android Chrome 键盘修复
+          window.addEventListener('resize', function() {
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+              setTimeout(function() {
+                document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 300);
+            }
+          });
+        }
+        
+        // Firefox 移动版特殊修复
+        if (browserInfo.isFirefox && browserInfo.isMobile) {
+          console.log('检测到Firefox移动版，应用特殊修复');
+          
+          // Firefox 滚动修复
+          document.addEventListener('MozTouchAction', function(e) {
+            e.preventDefault();
+          });
+        }
+        
+        // Edge 移动版特殊修复
+        if (browserInfo.isEdge && browserInfo.isMobile) {
+          console.log('检测到Edge移动版，应用特殊修复');
+          
+          // Edge 触摸修复
+          document.addEventListener('pointerdown', function(e) {
+            if (e.pointerType === 'touch') {
+              e.target.style.touchAction = 'manipulation';
+            }
+          });
+        }
+        
+        // 通用浏览器修复
+        console.log('应用通用浏览器修复');
+        
+        // 防止右键菜单
+        document.addEventListener('contextmenu', function(e) {
+          if (browserInfo.isMobile) {
+            e.preventDefault();
+          }
+        });
+        
+        // 防止文本选择
+        if (browserInfo.isMobile) {
+          document.addEventListener('selectstart', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+              e.preventDefault();
+            }
+          });
+        }
+        
+        // 修复滚动条在移动设备上的显示问题
+        if (browserInfo.isMobile) {
+          const style = document.createElement('style');
+          style.textContent = `
+            ::-webkit-scrollbar {
+              width: 0px;
+              background: transparent;
+            }
+            * {
+              -webkit-overflow-scrolling: touch;
+              overflow-scrolling: touch;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        // 存储浏览器信息供React使用
+        window.browserInfo = browserInfo;
+        
+      })();
+      
+      // 页面加载完成后隐藏加载屏幕
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.3s ease-out';
+            setTimeout(function() {
+              loadingScreen.style.display = 'none';
+            }, 300);
+          }
+        }, 1000); // 延迟1秒确保React应用完全加载
+      });
+      
+      // 错误处理
+      window.addEventListener('error', function(e) {
+        console.error('页面错误:', e.error);
+      });
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('未处理的Promise拒绝:', e.reason);
+      });
+      
+      // 网络状态检测
+      window.addEventListener('online', function() {
+        console.log('网络已连接');
+      });
+      
+      window.addEventListener('offline', function() {
+        console.log('网络已断开');
+      });
+    </script>
+  </body>
+</html>

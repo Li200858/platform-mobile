@@ -1,0 +1,82 @@
+{
+  "short_name": "艺术平台移动端",
+  "name": "海淀外国语国际部艺术平台 - 移动端版本",
+  "description": "专为iPad Safari优化的校园艺术展示平台",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "zh-CN",
+  "categories": ["education", "art", "entertainment"],
+  "prefer_related_applications": false,
+  "display_override": ["window-controls-overlay"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "shortcuts": [
+    {
+      "name": "艺术作品",
+      "short_name": "艺术作品",
+      "description": "浏览艺术作品",
+      "url": "/?section=art",
+      "icons": [
+        {
+          "src": "logo192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "活动展示",
+      "short_name": "活动展示",
+      "description": "查看校园活动",
+      "url": "/?section=activity",
+      "icons": [
+        {
+          "src": "logo192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "我的作品",
+      "short_name": "我的作品",
+      "description": "管理我的作品",
+      "url": "/?section=myworks",
+      "icons": [
+        {
+          "src": "logo192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "艺术平台主界面"
+    }
+  ]
+}

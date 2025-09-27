@@ -1,0 +1,36 @@
+services:
+  # 后端服务
+  - type: web
+    name: platform-mobile-backend
+    env: node
+    plan: free
+    buildCommand: |
+      cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5001
+      - key: MONGODB_URI
+        fromDatabase:
+          name: platform-program-db
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        value: https://platform-mobile.onrender.com,https://platform-mobile-frontend.onrender.com,https://hwartplatform.org,https://www.hwartplatform.org,https://mobile.hwartplatform.org,https://ipad.hwartplatform.org
+
+  # 前端服务
+  - type: web
+    name: platform-mobile-frontend
+    env: static
+    buildCommand: |
+      cd client && npm install && npm run build
+    staticPublishPath: client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://platform-mobile-backend.onrender.com
+
+databases:
+  - name: platform-program-db
+    databaseName: platform-program
+    user: platform-program-user
