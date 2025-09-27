@@ -104,8 +104,18 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus 
     return <CreateActivityForm onBack={() => setShowCreate(false)} userInfo={userInfo} onSuccess={loadActivities} maintenanceStatus={maintenanceStatus} />;
   }
 
+  // 检测是否为移动设备
+  const isMobile = window.innerWidth <= 768;
+
   return (
-    <div style={{ maxWidth: 800, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+    <div style={{ 
+      maxWidth: isMobile ? '100%' : 800, 
+      margin: isMobile ? '20px auto' : '40px auto', 
+      background: '#fff', 
+      borderRadius: 15, 
+      padding: isMobile ? 15 : 30, 
+      boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
         <button
           onClick={onBack}
