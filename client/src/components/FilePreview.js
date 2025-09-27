@@ -1,441 +1,270 @@
 import React, { useState } from 'react';
 
-export default function FilePreview({ file, allowDownload = true, isMobile = false }) {
-  const [showFullImage, setShowFullImage] = useState(false);
+export default function FilePreview({ urls, apiBaseUrl = process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000', showDownloadButton = false, onDownload, allowDownload = true }) {
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  // 获取文件类型
-  const getFileType = (filename) => {
-    const ext = filename.toLowerCase().split('.').pop();
-    const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-    const videoTypes = ['mp4', 'avi', 'mov', 'wmv', 'flv'];
-    const audioTypes = ['mp3', 'wav', 'm4a', 'aac'];
-    const documentTypes = ['pdf', 'doc', 'docx', 'txt'];
-    
-    if (imageTypes.includes(ext)) return 'image';
-    if (videoTypes.includes(ext)) return 'video';
-    if (audioTypes.includes(ext)) return 'audio';
-    if (documentTypes.includes(ext)) return 'document';
-    return 'other';
-  };
+  if (!urls || urls.length === 0) {
+    return null;
+  }
 
-  // 格式化文件大小
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  // 获取文件图标
-  const getFileIcon = (fileType) => {
-    const icons = {
-      image: '图片',
-      video: '视频',
-      audio: '音频',
-      document: '文档',
-      other: '文件'
-    };
-    return icons[fileType] || '文件';
-  };
-
-  // 移动端优化的样式
-  const mobileStyles = {
-    container: {
-      position: 'relative',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      background: '#f8f9fa',
-      border: '1px solid #e9ecef',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      '-webkit-transform': 'translateZ(0)',
-      transform: 'translateZ(0)',
-      '-webkit-backface-visibility': 'hidden',
-      backfaceVisibility: 'hidden'
-    },
-    imagePreview: {
-      width: '100%',
-      height: '200px',
-      objectFit: 'cover',
-      display: 'block',
-      '-webkit-transform': 'translateZ(0)',
-      transform: 'translateZ(0)',
-      '-webkit-backface-visibility': 'hidden',
-      backfaceVisibility: 'hidden'
-    },
-    videoPreview: {
-      width: '100%',
-      height: '200px',
-      objectFit: 'cover',
-      display: 'block',
-      '-webkit-transform': 'translateZ(0)',
-      transform: 'translateZ(0)',
-      '-webkit-backface-visibility': 'hidden',
-      backfaceVisibility: 'hidden'
-    },
-    fileInfo: {
-      padding: isMobile ? '12px' : '10px',
-      background: 'white',
-      borderTop: '1px solid #e9ecef'
-    },
-    fileName: {
-      fontSize: isMobile ? '14px' : '13px',
-      fontWeight: '500',
-      color: '#2c3e50',
-      marginBottom: '4px',
-      wordBreak: 'break-word',
-      lineHeight: '1.4'
-    },
-    fileMeta: {
-      fontSize: isMobile ? '12px' : '11px',
-      color: '#6c757d',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    },
-    openButton: {
-      background: '#17a2b8',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      padding: isMobile ? '8px 12px' : '6px 10px',
-      fontSize: isMobile ? '12px' : '11px',
-      cursor: 'pointer',
-      marginTop: '8px',
-      width: '100%',
-      '-webkit-tap-highlight-color': 'transparent',
-      touchAction: 'manipulation',
-      minHeight: isMobile ? '36px' : '32px'
-    },
-    fullImageOverlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.9)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px'
-    },
-    fullImage: {
-      maxWidth: '100%',
-      maxHeight: '100%',
-      objectFit: 'contain',
-      borderRadius: '8px',
-      '-webkit-transform': 'translateZ(0)',
-      transform: 'translateZ(0)',
-      '-webkit-backface-visibility': 'hidden',
-      backfaceVisibility: 'hidden'
-    },
-    closeButton: {
-      position: 'absolute',
-      top: '20px',
-      right: '20px',
-      background: 'rgba(255, 255, 255, 0.2)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '50%',
-      width: isMobile ? '44px' : '40px',
-      height: isMobile ? '44px' : '40px',
-      fontSize: '24px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      '-webkit-tap-highlight-color': 'transparent',
-      touchAction: 'manipulation'
+  const getFileType = (url) => {
+    const extension = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(extension)) {
+      return 'image';
+    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(extension)) {
+      return 'video';
+    } else if (['pdf'].includes(extension)) {
+      return 'pdf';
+    } else if (['doc', 'docx'].includes(extension)) {
+      return 'word';
+    } else if (['xls', 'xlsx'].includes(extension)) {
+      return 'excel';
+    } else if (['ppt', 'pptx'].includes(extension)) {
+      return 'powerpoint';
+    } else {
+      return 'file';
     }
   };
 
-  if (!file) return null;
+  const getFileIcon = (fileType) => {
+    switch (fileType) {
+      case 'image':
+        return '';
+      case 'video':
+        return '';
+      case 'pdf':
+        return '';
+      case 'word':
+        return '';
+      case 'excel':
+        return '';
+      case 'powerpoint':
+        return '';
+      default:
+        return '';
+    }
+  };
 
-  const fileType = getFileType(file.filename || file.name || '');
-  const fileSize = file.size ? formatFileSize(file.size) : '';
-  const fileName = file.originalName || file.filename || file.name || '未知文件';
+  const handleDownload = (url) => {
+    const link = document.createElement('a');
+    // 如果URL已经包含完整路径，直接使用；否则构建完整URL
+    const downloadUrl = url.startsWith('http') ? url : `${apiBaseUrl}${url.startsWith('/') ? url : `/${url}`}`;
+    link.href = downloadUrl;
+    link.download = url.split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-  // 图片预览
-  if (fileType === 'image') {
-    const imageUrl = file.url || file.path || '';
-    
-    return (
-      <>
-        <div 
-          style={mobileStyles.container}
-          onClick={() => setShowFullImage(true)}
-        >
-          <img
-            src={imageUrl}
-            alt={fileName}
-            style={mobileStyles.imagePreview}
-            loading="lazy"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
-          />
-          <div style={{
-            ...mobileStyles.imagePreview,
-            display: 'none',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '48px',
-            color: '#6c757d'
-          }}>
-            图片
-          </div>
-          
-          <div style={mobileStyles.fileInfo}>
-            <div style={mobileStyles.fileName}>
-              {fileName}
-            </div>
-            <div style={mobileStyles.fileMeta}>
-              <span>{getFileIcon(fileType)} 图片</span>
-              {fileSize && <span>{fileSize}</span>}
-            </div>
-            {allowDownload && (
-              <button
-                style={mobileStyles.openButton}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(imageUrl, '_blank');
-                }}
-              >
-                预览
-              </button>
-            )}
-            {allowDownload && (
-              <button
-                style={{
-                  ...mobileStyles.openButton,
-                  background: '#007bff',
-                  marginTop: '8px'
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const link = document.createElement('a');
-                  link.href = imageUrl;
-                  link.download = fileName;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-              >
-                下载
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 全屏图片预览 */}
-        {showFullImage && (
-          <div 
-            style={mobileStyles.fullImageOverlay}
-            onClick={() => setShowFullImage(false)}
-          >
-            <img
-              src={imageUrl}
-              alt={fileName}
-              style={mobileStyles.fullImage}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              style={mobileStyles.closeButton}
-              onClick={() => setShowFullImage(false)}
-            >
-              ×
-            </button>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // 视频预览
-  if (fileType === 'video') {
-    const videoUrl = file.url || file.path || '';
-    
-    return (
-      <div style={mobileStyles.container}>
-        <video
-          style={mobileStyles.videoPreview}
-          controls
-          preload="metadata"
-          poster=""
-        >
-          <source src={videoUrl} type="video/mp4" />
-          您的浏览器不支持视频播放
-        </video>
-        
-        <div style={mobileStyles.fileInfo}>
-          <div style={mobileStyles.fileName}>
-            {fileName}
-          </div>
-          <div style={mobileStyles.fileMeta}>
-            <span>{getFileIcon(fileType)} 视频</span>
-            {fileSize && <span>{fileSize}</span>}
-          </div>
-          {allowDownload && (
-            <button
-              style={mobileStyles.openButton}
-              onClick={() => window.open(videoUrl, '_blank')}
-            >
-              预览
-            </button>
-          )}
-          {allowDownload && (
-            <button
-              style={{
-                ...mobileStyles.openButton,
-                background: '#007bff',
-                marginTop: '8px'
-              }}
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = videoUrl;
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-            >
-              下载
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // 音频预览
-  if (fileType === 'audio') {
-    const audioUrl = file.url || file.path || '';
-    
-    return (
-      <div style={mobileStyles.container}>
-        <div style={{
-          height: '100px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f8f9fa',
-          fontSize: '48px'
-        }}>
-          音频
-        </div>
-        
-        <div style={mobileStyles.fileInfo}>
-          <div style={mobileStyles.fileName}>
-            {fileName}
-          </div>
-          <div style={mobileStyles.fileMeta}>
-            <span>{getFileIcon(fileType)} 音频</span>
-            {fileSize && <span>{fileSize}</span>}
-          </div>
-          
-          <audio
-            style={{
-              width: '100%',
-              marginTop: '8px',
-              height: isMobile ? '40px' : '32px'
-            }}
-            controls
-            preload="metadata"
-          >
-            <source src={audioUrl} type="audio/mpeg" />
-            您的浏览器不支持音频播放
-          </audio>
-          
-          {allowDownload && (
-            <button
-              style={mobileStyles.openButton}
-              onClick={() => window.open(audioUrl, '_blank')}
-            >
-              预览
-            </button>
-          )}
-          {allowDownload && (
-            <button
-              style={{
-                ...mobileStyles.openButton,
-                background: '#007bff',
-                marginTop: '8px'
-              }}
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = audioUrl;
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-            >
-              下载
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // 文档和其他文件
   return (
-    <div style={mobileStyles.container}>
-      <div style={{
-        height: '100px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f8f9fa',
-        fontSize: '48px'
-      }}>
-        {getFileIcon(fileType)}
+    <div style={{ marginTop: '15px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+        {urls.map((url, index) => {
+          const fileType = getFileType(url);
+          // 如果URL已经包含完整路径，直接使用；否则构建完整URL
+          const fullUrl = url.startsWith('http') ? url : `${apiBaseUrl}${url.startsWith('/') ? url : `/${url}`}`;
+          const fileName = url.split('/').pop();
+
+          return (
+            <div key={index} style={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: '8px', 
+              padding: '10px', 
+              background: '#f9f9f9',
+              minWidth: '120px',
+              textAlign: 'center'
+            }}>
+              {fileType === 'image' ? (
+                <div>
+                  <img
+                    src={fullUrl}
+                    alt={fileName}
+                    style={{
+                      width: '100px',
+                      height: '100px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: '2px solid #fff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                    onClick={() => setSelectedImage(fullUrl)}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                  />
+                  <div style={{ display: 'none', fontSize: '48px', margin: '20px 0' }}>
+                    {getFileIcon(fileType)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '5px', wordBreak: 'break-all' }}>
+                    {fileName}
+                  </div>
+                  <button
+                    onClick={() => window.open(fullUrl, '_blank')}
+                    style={{
+                      marginTop: '5px',
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      background: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    预览
+                  </button>
+                  {allowDownload && (
+                    <button
+                      onClick={() => handleDownload(url)}
+                      style={{
+                        marginTop: '5px',
+                        marginLeft: '5px',
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        background: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      下载
+                    </button>
+                  )}
+                </div>
+              ) : fileType === 'video' ? (
+                <div>
+                  <video
+                    src={fullUrl}
+                    controls
+                    style={{
+                      width: '100px',
+                      height: '100px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      border: '2px solid #fff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                  />
+                  <div style={{ display: 'none', fontSize: '48px', margin: '20px 0' }}>
+                    {getFileIcon(fileType)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '5px', wordBreak: 'break-all' }}>
+                    {fileName}
+                  </div>
+                  <button
+                    onClick={() => window.open(fullUrl, '_blank')}
+                    style={{
+                      marginTop: '5px',
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      background: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    预览
+                  </button>
+                  {allowDownload && (
+                    <button
+                      onClick={() => handleDownload(url)}
+                      style={{
+                        marginTop: '5px',
+                        marginLeft: '5px',
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        background: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      下载
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: '48px', margin: '20px 0' }}>
+                    {getFileIcon(fileType)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '5px', wordBreak: 'break-all' }}>
+                    {fileName}
+                  </div>
+                  <button
+                    onClick={() => window.open(fullUrl, '_blank')}
+                    style={{
+                      marginTop: '5px',
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      background: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    预览
+                  </button>
+                  {allowDownload && (
+                    <button
+                      onClick={() => handleDownload(url)}
+                      style={{
+                        marginTop: '5px',
+                        marginLeft: '5px',
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        background: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      下载
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      
-      <div style={mobileStyles.fileInfo}>
-        <div style={mobileStyles.fileName}>
-          {fileName}
+
+      {/* 图片放大弹窗 */}
+      {selectedImage && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setSelectedImage(null)}
+        >
+          <img 
+            src={selectedImage} 
+            alt="" 
+            style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
-        <div style={mobileStyles.fileMeta}>
-          <span>{getFileIcon(fileType)} {fileType === 'document' ? '文档' : '文件'}</span>
-          {fileSize && <span>{fileSize}</span>}
-        </div>
-        {allowDownload && (
-          <button
-            style={mobileStyles.openButton}
-            onClick={() => {
-              const fileUrl = file.url || file.path || '';
-              // 所有文件都在新窗口中打开预览
-              window.open(fileUrl, '_blank');
-            }}
-          >
-            预览
-          </button>
-        )}
-        {allowDownload && (
-          <button
-            style={{
-              ...mobileStyles.openButton,
-              background: '#007bff',
-              marginTop: '8px'
-            }}
-            onClick={() => {
-              const fileUrl = file.url || file.path || '';
-              const link = document.createElement('a');
-              link.href = fileUrl;
-              link.download = file.filename || file.name || fileUrl.split('/').pop();
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-          >
-            下载
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }
