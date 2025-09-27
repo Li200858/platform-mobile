@@ -310,6 +310,19 @@ app.post('/api/art', async (req, res) => {
   }
   
   try {
+    // 处理media字段，确保是字符串数组
+    let processedMedia = [];
+    if (media && Array.isArray(media)) {
+      processedMedia = media.map(item => {
+        if (typeof item === 'string') {
+          return item;
+        } else if (typeof item === 'object' && item.url) {
+          return item.url;
+        }
+        return String(item);
+      });
+    }
+    
     const post = await Art.create({
       tab: tab || '全部',
       title,
@@ -317,7 +330,7 @@ app.post('/api/art', async (req, res) => {
       author: authorName,
       authorName,
       authorClass,
-      media: media || [],
+      media: processedMedia,
       allowDownload: allowDownload !== false,
       likes: 0,
       likedUsers: [],
