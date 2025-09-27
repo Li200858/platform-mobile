@@ -1,465 +1,512 @@
 import React, { useState, useEffect } from 'react';
-import FilePreview from './FilePreview';
 import api from '../api';
 
-export default function PublicPortfolio({ userInfo, onBack, isMobile = false }) {
+export default function PublicPortfolio({ userInfo, onBack }) {
   const [portfolios, setPortfolios] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [selectedPortfolio, setSelectedPortfolio] = useState(null);
-
-  const mobileStyles = {
-    container: {
-      padding: isMobile ? '15px' : '20px',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    },
-    backButton: {
-      padding: isMobile ? '12px 20px' : '10px 20px',
-      background: '#6c757d',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      fontSize: isMobile ? '16px' : '14px',
-      marginBottom: '20px',
-      '-webkit-tap-highlight-color': 'transparent',
-      touchAction: 'manipulation',
-      minHeight: isMobile ? '44px' : '40px'
-    }
-  };
-
-  // 加载公开作品集
-  const loadPublicPortfolios = async () => {
-    setLoading(true);
-    try {
-      const data = await api.portfolio.getPublicPortfolios();
-      setPortfolios(data);
-    } catch (error) {
-      console.error('加载公开作品集失败:', error);
-      setMessage('加载失败，请重试');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [selectedContent, setSelectedContent] = useState(null);
 
   useEffect(() => {
     loadPublicPortfolios();
   }, []);
 
-  // 查看作品集详情
-  const handleViewPortfolio = async (portfolioId) => {
-    setLoading(true);
+  const loadPublicPortfolios = async () => {
     try {
-      const data = await api.portfolio.getPortfolioDetail(portfolioId);
-      setSelectedPortfolio(data);
+      setLoading(true);
+      const data = await api.portfolio.getPublicPortfolios();
+      setPortfolios(data);
     } catch (error) {
-      console.error('加载作品集详情失败:', error);
-      setMessage('加载详情失败，请重试');
+      console.error('加载公开作品集失败:', error);
+      setMessage('加载公开作品集失败');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div style={mobileStyles.container}>
-      {/* 返回按钮 */}
-      <button onClick={onBack} style={mobileStyles.backButton}>
-        ← 返回
-      </button>
+  const handleViewPortfolio = async (portfolioId) => {
+    try {
+      const data = await api.portfolio.getPortfolio(portfolioId);
+      setSelectedPortfolio(data);
+    } catch (error) {
+      console.error('加载作品集详情失败:', error);
+      setMessage('加载作品集详情失败');
+    }
+  };
 
-      {/* 标题 */}
-      <h1 style={{
-        fontSize: isMobile ? '24px' : '28px',
-        color: '#2c3e50',
-        marginBottom: '20px',
-        textAlign: 'center'
-      }}>
-        公开作品集
-      </h1>
+  const handleViewContent = (content) => {
+    setSelectedContent(content);
+  };
 
-      {/* 消息提示 */}
-      {message && (
-        <div style={{
-          background: '#d4edda',
-          color: '#155724',
-          padding: '12px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          border: '1px solid #c3e6cb'
-        }}>
-          {message}
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 1000, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ fontSize: '18px', color: '#7f8c8d' }}>加载中...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedPortfolio) {
+    return (
+      <div style={{ maxWidth: 1200, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+          <h2 style={{ margin: 0, color: '#2c3e50' }}>{selectedPortfolio.title}</h2>
           <button
-            onClick={() => setMessage('')}
+            onClick={() => setSelectedPortfolio(null)}
             style={{
-              float: 'right',
-              background: 'none',
+              padding: '10px 20px',
+              background: '#95a5a6',
+              color: 'white',
               border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: '#155724'
+              borderRadius: 8,
+              cursor: 'pointer'
             }}
           >
-            ×
+            返回列表
           </button>
         </div>
-      )}
 
-      {/* 加载状态 */}
-      {loading && (
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          color: '#7f8c8d'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid #e9ecef',
-            borderTop: '4px solid #3498db',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          加载中...
-        </div>
-      )}
-
-      {/* 作品集列表 */}
-      {!loading && portfolios.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 20px',
-          color: '#7f8c8d'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📝</div>
-          <div style={{ fontSize: '18px', marginBottom: '10px' }}>暂无公开作品集</div>
-          <div style={{ fontSize: '14px' }}>期待更多精彩的作品集！</div>
-        </div>
-      )}
-
-      {!loading && portfolios.map(portfolio => (
-        <div key={portfolio._id} style={{
-          background: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
-          marginBottom: '20px',
-          overflow: 'hidden',
-          '-webkit-transform': 'translateZ(0)',
-          transform: 'translateZ(0)',
-          '-webkit-backface-visibility': 'hidden',
-          backfaceVisibility: 'hidden'
-        }}>
-          {/* 作品集头部 */}
-          <div style={{
-            padding: isMobile ? '15px' : '20px',
-            borderBottom: '1px solid #f1f3f4',
-            background: '#e8f5e8'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              marginBottom: '8px'
-            }}>
-              <h3 style={{
-                fontSize: isMobile ? '18px' : '20px',
-                fontWeight: 'bold',
-                color: '#2c3e50',
-                margin: 0,
-                flex: 1,
-                marginRight: '10px'
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 20, marginBottom: 15 }}>
+            <div>
+              <strong>分类：</strong>
+              <span style={{ 
+                background: '#e8f4fd',
+                color: '#2980b9',
+                padding: '4px 8px',
+                borderRadius: 4,
+                fontSize: 12
               }}>
-                {portfolio.title}
-              </h3>
-              <button
-                onClick={() => handleViewPortfolio(portfolio._id)}
-                style={{
-                  padding: isMobile ? '8px 12px' : '6px 10px',
-                  background: '#3498db',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '12px' : '11px',
-                  '-webkit-tap-highlight-color': 'transparent',
-                  touchAction: 'manipulation'
-                }}
-              >
-                查看详情
-              </button>
+                {selectedPortfolio.category}
+              </span>
             </div>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '12px',
-              fontSize: isMobile ? '14px' : '13px',
-              color: '#7f8c8d'
-            }}>
-              <span>作者: {portfolio.authorName}</span>
-              <span>班级: {portfolio.authorClass}</span>
-              <span>时间: {new Date(portfolio.createdAt).toLocaleString()}</span>
+            <div>
+              <strong>创建者：</strong>{selectedPortfolio.creator}
+            </div>
+            <div>
+              <strong>创建时间：</strong>{new Date(selectedPortfolio.createdAt).toLocaleString()}
             </div>
           </div>
-
-          {/* 作品集描述 */}
-          {portfolio.description && (
-            <div style={{
-              padding: isMobile ? '15px' : '20px',
-              borderBottom: '1px solid #f1f3f4'
+          
+          {selectedPortfolio.description && (
+            <div style={{ 
+              background: '#f8f9fa', 
+              padding: 15, 
+              borderRadius: 8, 
+              marginBottom: 20,
+              border: '1px solid #ecf0f1'
             }}>
-              <div style={{
-                fontSize: isMobile ? '16px' : '14px',
-                color: '#2c3e50',
-                lineHeight: '1.6'
-              }}>
-                {portfolio.description}
-              </div>
+              <strong>作品集描述：</strong>
+              <div style={{ marginTop: 8, lineHeight: 1.6 }}>{selectedPortfolio.description}</div>
             </div>
           )}
 
-          {/* 作品集预览 */}
+          {selectedPortfolio.tags && selectedPortfolio.tags.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <strong>标签：</strong>
+              <div style={{ marginTop: 8 }}>
+                {selectedPortfolio.tags.map((tag, index) => (
+                  <span key={index} style={{
+                    background: '#ecf0f1',
+                    color: '#2c3e50',
+                    padding: '4px 8px',
+                    borderRadius: 12,
+                    fontSize: 12,
+                    marginRight: 8,
+                    display: 'inline-block'
+                  }}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <strong>作品列表 ({selectedPortfolio.works.length + (selectedPortfolio.contents ? selectedPortfolio.contents.length : 0)})</strong>
+        </div>
+
+        {/* 直接上传的内容 */}
+        {selectedPortfolio.contents && selectedPortfolio.contents.length > 0 && (
+          <div style={{ marginBottom: 30 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+              {selectedPortfolio.contents.map((content, index) => (
+                <div key={`content-${index}`} style={{
+                  border: '1px solid #ecf0f1',
+                  borderRadius: 12,
+                  padding: 20,
+                  background: '#f8f9fa',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onClick={() => handleViewContent(content)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}>
+                  <div style={{ marginBottom: 15 }}>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>
+                      {content.title}
+                    </h5>
+                    <p style={{ margin: '0 0 15px 0', color: '#7f8c8d', fontSize: '14px' }}>
+                      {content.content?.substring(0, 100) || '暂无内容描述'}...
+                    </p>
+                    {content.media && content.media.length > 0 && (
+                      <div style={{ marginBottom: 15 }}>
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>附件:</div>
+                        {content.media.map((file, fileIndex) => (
+                          <div key={fileIndex} style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>
+                            {file.originalName}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#7f8c8d' }}>
+                    <span>{new Date(content.createdAt).toLocaleDateString()}</span>
+                    <span>{content.authorName}</span>
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: '12px', color: '#3498db', fontWeight: 'bold' }}>
+                    点击查看详情 →
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 关联的艺术作品 */}
+        {selectedPortfolio.works && selectedPortfolio.works.length > 0 && (
+          <div style={{ marginBottom: 30 }}>
+            <h4 style={{ marginBottom: 15, color: '#34495e', fontSize: 16 }}>关联的艺术作品</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+              {selectedPortfolio.works.map(work => (
+                <div key={work._id} style={{
+                  border: '1px solid #ecf0f1',
+                  borderRadius: 12,
+                  padding: 20,
+                  background: '#f8f9fa'
+                }}>
+                  <div style={{ marginBottom: 15 }}>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>
+                      {work.title}
+                    </h5>
+                    <p style={{ margin: '0 0 15px 0', color: '#7f8c8d', fontSize: '14px' }}>
+                      {work.content?.substring(0, 100)}...
+                    </p>
+                  </div>
+
+                  {work.media && work.media.length > 0 && (
+                    <div style={{ marginBottom: 15 }}>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>附件:</div>
+                      {work.media.map((file, fileIndex) => (
+                        <div key={fileIndex} style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>
+                          {file.originalName}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#7f8c8d' }}>
+                    <span>{new Date(work.createdAt).toLocaleDateString()}</span>
+                    <span>{work.authorName}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 空状态 */}
+        {(!selectedPortfolio.contents || selectedPortfolio.contents.length === 0) && 
+         (!selectedPortfolio.works || selectedPortfolio.works.length === 0) && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>[文件夹]</div>
+            <div style={{ fontSize: '18px', marginBottom: '10px' }}>暂无作品</div>
+            <div style={{ fontSize: '14px' }}>此作品集还没有任何作品</div>
+          </div>
+        )}
+
+        {/* 内容详情查看模态框 */}
+        {selectedContent && (
           <div style={{
-            padding: isMobile ? '15px' : '20px'
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
           }}>
             <div style={{
-              fontSize: isMobile ? '16px' : '14px',
-              color: '#2c3e50',
-              marginBottom: '15px',
-              fontWeight: '500'
+              background: 'white',
+              borderRadius: 15,
+              padding: 30,
+              width: '90%',
+              maxWidth: 800,
+              maxHeight: '80vh',
+              overflow: 'auto'
             }}>
-              包含作品: {portfolio.works ? portfolio.works.length : 0} 个
-            </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ margin: 0, color: '#2c3e50' }}>{selectedContent.title}</h3>
+                <button
+                  onClick={() => setSelectedContent(null)}
+                  style={{
+                    background: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  ✕ 关闭
+                </button>
+              </div>
 
-            {/* 作品预览 */}
-            {portfolio.works && portfolio.works.length > 0 && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                gap: '10px'
-              }}>
-                {portfolio.works.slice(0, 6).map((work, index) => (
-                  <div key={index} style={{
-                    background: '#f8f9fa',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    border: '1px solid #e9ecef',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{
-                      fontSize: isMobile ? '14px' : '13px',
-                      color: '#2c3e50',
-                      marginBottom: '5px',
-                      fontWeight: '500',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {work.title || `作品 ${index + 1}`}
-                    </div>
-                    <div style={{
-                      fontSize: isMobile ? '12px' : '11px',
-                      color: '#6c757d'
-                    }}>
-                      {work.authorName}
-                    </div>
-                  </div>
-                ))}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', gap: 20, marginBottom: 15, fontSize: '14px', color: '#7f8c8d' }}>
+                  <span>作者: {selectedContent.authorName}</span>
+                  <span>发布时间: {new Date(selectedContent.createdAt).toLocaleString()}</span>
+                </div>
                 
-                {portfolio.works.length > 6 && (
-                  <div style={{
-                    background: '#e9ecef',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    border: '1px solid #dee2e6',
-                    textAlign: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                {selectedContent.content && (
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    padding: 15, 
+                    borderRadius: 8, 
+                    marginBottom: 20,
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: 1.6
                   }}>
-                    <div style={{
-                      fontSize: isMobile ? '14px' : '13px',
-                      color: '#6c757d'
-                    }}>
-                      +{portfolio.works.length - 6} 更多
+                    {selectedContent.content}
+                  </div>
+                )}
+
+                {selectedContent.media && selectedContent.media.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: '0 0 15px 0', color: '#2c3e50' }}>附件预览</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 15 }}>
+                      {selectedContent.media.map((file, index) => (
+                        <div key={index} style={{
+                          border: '1px solid #ecf0f1',
+                          borderRadius: 8,
+                          padding: 15,
+                          background: '#f8f9fa',
+                          textAlign: 'center'
+                        }}>
+                          {file.type?.startsWith('image/') ? (
+                            <div>
+                              <img 
+                                src={file.url} 
+                                alt={file.originalName}
+                                style={{ 
+                                  maxWidth: '100%', 
+                                  maxHeight: 150, 
+                                  borderRadius: 4,
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => window.open(file.url, '_blank')}
+                              />
+                              <div style={{ marginTop: 8, fontSize: '12px', color: '#7f8c8d' }}>
+                                {file.originalName}
+                              </div>
+                            </div>
+                          ) : file.type?.startsWith('video/') ? (
+                            <div>
+                              <video 
+                                controls 
+                                style={{ maxWidth: '100%', maxHeight: 150 }}
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                <source src={file.url} type={file.type} />
+                                您的浏览器不支持视频播放
+                              </video>
+                              <div style={{ marginTop: 8, fontSize: '12px', color: '#7f8c8d' }}>
+                                {file.originalName}
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ 
+                                fontSize: '24px', 
+                                color: '#3498db', 
+                                marginBottom: 8 
+                              }}>
+                                📄
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#7f8c8d', marginBottom: 8 }}>
+                                {file.originalName}
+                              </div>
+                              <button
+                                onClick={() => window.open(file.url, '_blank')}
+                                style={{
+                                  background: '#3498db',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '6px 12px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                预览文件
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      ))}
+        )}
+      </div>
+    );
+  }
 
-      {/* 作品集详情模态框 */}
-      {selectedPortfolio && (
+  return (
+    <div style={{ maxWidth: 1000, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+        <h2 style={{ margin: 0, color: '#2c3e50' }}>公开作品集</h2>
+        <button
+          onClick={onBack}
+          style={{
+            padding: '10px 20px',
+            background: '#95a5a6',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            cursor: 'pointer'
+          }}
+        >
+          返回
+        </button>
+      </div>
+
+      {/* 消息显示 */}
+      {message && (
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          padding: '20px'
+          background: message.includes('成功') ? '#d4edda' : '#f8d7da',
+          color: message.includes('成功') ? '#155724' : '#721c24',
+          padding: '12px 16px',
+          borderRadius: 8,
+          marginBottom: 20,
+          border: `1px solid ${message.includes('成功') ? '#c3e6cb' : '#f5c6cb'}`
         }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            maxWidth: '800px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{
-              padding: '20px',
-              borderBottom: '1px solid #e9ecef',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{ margin: 0, color: '#2c3e50' }}>{selectedPortfolio.title}</h3>
-              <button
-                onClick={() => setSelectedPortfolio(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#7f8c8d',
-                  padding: '0',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div style={{ padding: '20px' }}>
-              {/* 作品集信息 */}
-              <div style={{
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                padding: '15px',
-                marginBottom: '20px',
-                border: '1px solid #e9ecef'
-              }}>
-                <div style={{
-                  fontSize: isMobile ? '16px' : '14px',
-                  color: '#2c3e50',
-                  marginBottom: '10px',
-                  fontWeight: '500'
-                }}>
-                  作品集信息
-                </div>
-                <div style={{
-                  fontSize: isMobile ? '14px' : '13px',
-                  color: '#6c757d',
-                  lineHeight: '1.6'
-                }}>
-                  <div>作者: {selectedPortfolio.authorName}</div>
-                  <div>班级: {selectedPortfolio.authorClass}</div>
-                  <div>创建时间: {new Date(selectedPortfolio.createdAt).toLocaleString()}</div>
-                  <div>作品数量: {selectedPortfolio.works ? selectedPortfolio.works.length : 0} 个</div>
-                </div>
-              </div>
-
-              {/* 作品集描述 */}
-              {selectedPortfolio.description && (
-                <div style={{
-                  background: 'white',
-                  borderRadius: '8px',
-                  padding: '15px',
-                  marginBottom: '20px',
-                  border: '1px solid #e9ecef'
-                }}>
-                  <div style={{
-                    fontSize: isMobile ? '16px' : '14px',
-                    color: '#2c3e50',
-                    marginBottom: '10px',
-                    fontWeight: '500'
-                  }}>
-                    作品集描述
-                  </div>
-                  <div style={{
-                    fontSize: isMobile ? '15px' : '14px',
-                    color: '#2c3e50',
-                    lineHeight: '1.6'
-                  }}>
-                    {selectedPortfolio.description}
-                  </div>
-                </div>
-              )}
-
-              {/* 作品列表 */}
-              {selectedPortfolio.works && selectedPortfolio.works.length > 0 && (
-                <div>
-                  <div style={{
-                    fontSize: isMobile ? '16px' : '14px',
-                    color: '#2c3e50',
-                    marginBottom: '15px',
-                    fontWeight: '500'
-                  }}>
-                    作品列表
-                  </div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '15px'
-                  }}>
-                    {selectedPortfolio.works.map((work, index) => (
-                      <div key={index} style={{
-                        background: '#f8f9fa',
-                        borderRadius: '8px',
-                        padding: '15px',
-                        border: '1px solid #e9ecef'
-                      }}>
-                        <div style={{
-                          fontSize: isMobile ? '16px' : '14px',
-                          color: '#2c3e50',
-                          marginBottom: '8px',
-                          fontWeight: '500'
-                        }}>
-                          {work.title}
-                        </div>
-                        <div style={{
-                          fontSize: isMobile ? '14px' : '13px',
-                          color: '#6c757d',
-                          marginBottom: '8px',
-                          lineHeight: '1.4'
-                        }}>
-                          {work.content ? work.content.substring(0, 100) + '...' : ''}
-                        </div>
-                        <div style={{
-                          fontSize: isMobile ? '12px' : '11px',
-                          color: '#6c757d'
-                        }}>
-                          作者: {work.authorName} | 分类: {work.tab || '未分类'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          {message}
         </div>
       )}
 
-      {/* 旋转动画样式 */}
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* 作品集列表 */}
+      {portfolios.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: '#7f8c8d' }}>
+          <div style={{ fontSize: '64px', marginBottom: '20px' }}>[作品集]</div>
+          <div style={{ fontSize: '20px', marginBottom: '10px' }}>还没有公开作品集</div>
+          <div style={{ fontSize: '14px', marginBottom: '30px' }}>其他用户还没有分享他们的作品集</div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+          {portfolios.map(portfolio => (
+            <div key={portfolio._id} style={{
+              border: '1px solid #ecf0f1',
+              borderRadius: 12,
+              padding: 20,
+              background: '#f8f9fa',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+            onClick={() => handleViewPortfolio(portfolio._id)}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }}
+            >
+              <div style={{ marginBottom: 15 }}>
+                <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: 18 }}>
+                  {portfolio.title}
+                </h3>
+                <p style={{ margin: '0 0 15px 0', color: '#7f8c8d', fontSize: 14, lineHeight: 1.5 }}>
+                  {portfolio.description || '暂无描述'}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+                <span style={{
+                  background: '#e8f4fd',
+                  color: '#2980b9',
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  fontSize: 12
+                }}>
+                  {portfolio.category}
+                </span>
+                {portfolio.featured && (
+                  <span style={{
+                    background: '#fff3cd',
+                    color: '#856404',
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    fontSize: 12
+                  }}>
+                    精选
+                  </span>
+                )}
+              </div>
+
+              {portfolio.tags && portfolio.tags.length > 0 && (
+                <div style={{ marginBottom: 15 }}>
+                  {portfolio.tags.slice(0, 3).map((tag, index) => (
+                    <span key={index} style={{
+                      background: '#ecf0f1',
+                      color: '#2c3e50',
+                      padding: '2px 6px',
+                      borderRadius: 8,
+                      fontSize: 11,
+                      marginRight: 6,
+                      display: 'inline-block'
+                    }}>
+                      #{tag}
+                    </span>
+                  ))}
+                  {portfolio.tags.length > 3 && (
+                    <span style={{ fontSize: 11, color: '#7f8c8d' }}>
+                      +{portfolio.tags.length - 3} 更多
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#7f8c8d' }}>
+                <span>创建者: {portfolio.creator}</span>
+                <span>{new Date(portfolio.createdAt).toLocaleDateString()}</span>
+              </div>
+
+              <div style={{ marginTop: 10, fontSize: 12, color: '#95a5a6' }}>
+                作品数量: {portfolio.works.length + (portfolio.contents ? portfolio.contents.length : 0)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

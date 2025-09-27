@@ -2,318 +2,615 @@ import React, { useState, useEffect } from 'react';
 import FilePreview from './FilePreview';
 import api from '../api';
 
-export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus, isMobile = false }) {
+export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus }) {
   const [activities, setActivities] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [likedIds, setLikedIds] = useState([]);
-  const [favoriteIds, setFavoriteIds] = useState([]);
-  const [showComments, setShowComments] = useState({});
-  const [commentForm, setCommentForm] = useState({ author: '', authorClass: '', content: '' });
-
-  const mobileStyles = {
-    container: {
-      padding: isMobile ? '15px' : '20px',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    },
-    backButton: {
-      padding: isMobile ? '12px 20px' : '10px 20px',
-      background: '#6c757d',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      fontSize: isMobile ? '16px' : '14px',
-      marginBottom: '20px',
-      '-webkit-tap-highlight-color': 'transparent',
-      touchAction: 'manipulation',
-      minHeight: isMobile ? '44px' : '40px'
-    },
-    createButton: {
-      padding: isMobile ? '14px 20px' : '12px 24px',
-      background: '#27ae60',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      fontSize: isMobile ? '16px' : '14px',
-      fontWeight: '500',
-      marginBottom: '20px',
-      '-webkit-tap-highlight-color': 'transparent',
-      touchAction: 'manipulation',
-      minHeight: isMobile ? '48px' : '44px'
-    }
-  };
-
-  // 加载活动列表
-  const loadActivities = async () => {
-    setLoading(true);
-    try {
-      const data = await api.activity.getAll();
-      setActivities(data);
-    } catch (error) {
-      console.error('加载活动失败:', error);
-      setMessage('加载失败，请重试');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [likedIds, setLikedIds] = useState(() => {
+    const saved = localStorage.getItem('liked_activity_ids');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [favoriteIds, setFavoriteIds] = useState(() => {
+    const saved = localStorage.getItem('favorite_activity_ids');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     loadActivities();
   }, []);
 
+  const loadActivities = async () => {
+    try {
+      const data = await api.activity.getAll();
+      setActivities(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('加载活动失败:', error);
+      setActivities([]);
+    }
+  };
+
+  const handleLike = async (id) => {
+    if (!userInfo || !userInfo.name) {
+      alert('请先完善个人信息');
+      return;
+    }
+    
+    try {
+      const data = await api.activity.like(id, userInfo.name);
+      setActivities(prev => prev.map(item => item._id === id ? data : item));
+      
+      const isLiked = data.likedUsers && data.likedUsers.includes(userInfo.name);
+      let newLiked;
+      if (isLiked) {
+        newLiked = likedIds.includes(id) ? likedIds : [...likedIds, id];
+      } else {
+        newLiked = likedIds.filter(_id => _id !== id);
+      }
+      setLikedIds(newLiked);
+      localStorage.setItem('liked_activity_ids', JSON.stringify(newLiked));
+    } catch (error) {
+      console.error('点赞失败:', error);
+      alert('操作失败，请重试');
+    }
+  };
+
+  const handleFavorite = async (id) => {
+    if (!userInfo || !userInfo.name) {
+      alert('请先完善个人信息');
+      return;
+    }
+    
+    try {
+      const data = await api.activity.favorite(id, userInfo.name);
+      setActivities(prev => prev.map(item => item._id === id ? data : item));
+      
+      const isFavorited = data.favorites && data.favorites.includes(userInfo.name);
+      let newFavorites;
+      if (isFavorited) {
+        newFavorites = favoriteIds.includes(id) ? favoriteIds : [...favoriteIds, id];
+      } else {
+        newFavorites = favoriteIds.filter(_id => _id !== id);
+      }
+      setFavoriteIds(newFavorites);
+      localStorage.setItem('favorite_activity_ids', JSON.stringify(newFavorites));
+    } catch (error) {
+      console.error('收藏失败:', error);
+      alert('操作失败，请重试');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!userInfo || !userInfo.name) {
+      setMessage('请先完善个人信息');
+      return;
+    }
+
+    if (!window.confirm('确定要删除这个活动吗？此操作不可恢复。')) {
+      return;
+    }
+
+    try {
+      await api.activity.delete(id, userInfo.name, isAdmin || false);
+      setActivities(prev => prev.filter(item => item._id !== id));
+      setMessage('活动已删除');
+    } catch (error) {
+      console.error('删除失败:', error);
+      setMessage('删除失败，请重试');
+    }
+  };
+
+
+  if (showCreate) {
+    return <CreateActivityForm onBack={() => setShowCreate(false)} userInfo={userInfo} onSuccess={loadActivities} maintenanceStatus={maintenanceStatus} />;
+  }
+
   return (
-    <div style={mobileStyles.container}>
-      {/* 返回按钮 */}
-      <button onClick={onBack} style={mobileStyles.backButton}>
-        ← 返回
-      </button>
-
-      {/* 标题 */}
-      <h1 style={{
-        fontSize: isMobile ? '24px' : '28px',
-        color: '#2c3e50',
-        marginBottom: '20px',
-        textAlign: 'center'
-      }}>
-        活动展示
-      </h1>
-
-      {/* 创建活动按钮 */}
-      {userInfo && !maintenanceStatus.isEnabled && (
-        <button onClick={() => setShowCreate(true)} style={mobileStyles.createButton}>
-          创建活动
+    <div style={{ maxWidth: 800, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            marginRight: '15px',
+            color: '#7f8c8d'
+          }}
+        >
+          ←
         </button>
-      )}
+        <h2 style={{ margin: 0, color: '#2c3e50', flex: 1 }}>活动展示</h2>
+        <button 
+          onClick={() => {
+            if (maintenanceStatus.isEnabled && !userInfo?.isAdmin) {
+              alert(maintenanceStatus.message || '网站正在维护中，暂时无法创建活动');
+              return;
+            }
+            setShowCreate(true);
+          }}
+          disabled={maintenanceStatus.isEnabled && !userInfo?.isAdmin}
+          style={{ 
+            padding: '10px 20px', 
+            backgroundColor: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? '#95a5a6' : '#27ae60', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: 8,
+            cursor: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? 'not-allowed' : 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            opacity: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? 0.6 : 1
+          }}
+        >
+          {maintenanceStatus.isEnabled && !userInfo?.isAdmin ? '+ 维护中' : '+ 创建活动'}
+        </button>
+      </div>
 
-      {/* 消息提示 */}
+      {/* 消息显示 */}
       {message && (
-        <div style={{
-          background: '#d4edda',
-          color: '#155724',
-          padding: '12px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          border: '1px solid #c3e6cb'
+        <div style={{ 
+          marginBottom: 20, 
+          padding: '15px', 
+          background: message.includes('成功') || message.includes('已') ? '#d4edda' : '#f8d7da',
+          color: message.includes('成功') || message.includes('已') ? '#155724' : '#721c24',
+          borderRadius: 8,
+          border: `1px solid ${message.includes('成功') || message.includes('已') ? '#c3e6cb' : '#f5c6cb'}`
         }}>
           {message}
-          <button
-            onClick={() => setMessage('')}
-            style={{
-              float: 'right',
-              background: 'none',
-              border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: '#155724'
-            }}
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* 加载状态 */}
-      {loading && (
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          color: '#7f8c8d'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid #e9ecef',
-            borderTop: '4px solid #3498db',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          加载中...
-        </div>
-      )}
-
-      {/* 活动列表 */}
-      {!loading && activities.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 20px',
-          color: '#7f8c8d'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📝</div>
-          <div style={{ fontSize: '18px', marginBottom: '10px' }}>暂无活动</div>
-          <div style={{ fontSize: '14px' }}>快来创建第一个活动吧！</div>
-        </div>
-      )}
-
-      {!loading && activities.map(activity => (
-        <div key={activity._id} style={{
-          background: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
-          marginBottom: '20px',
-          overflow: 'hidden',
-          '-webkit-transform': 'translateZ(0)',
-          transform: 'translateZ(0)',
-          '-webkit-backface-visibility': 'hidden',
-          backfaceVisibility: 'hidden'
-        }}>
-          {/* 活动头部 */}
-          <div style={{
-            padding: isMobile ? '15px' : '20px',
-            borderBottom: '1px solid #f1f3f4'
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {activities.map(activity => (
+          <div key={activity._id} data-activity-id={activity._id} style={{ 
+            border: '1px solid #ecf0f1', 
+            borderRadius: 12,
+            padding: 20,
+            background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
           }}>
-            <h3 style={{
-              fontSize: isMobile ? '18px' : '20px',
-              fontWeight: 'bold',
-              color: '#2c3e50',
-              marginBottom: '8px'
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 15 }}>
+              <div style={{
+                width: 45,
+                height: 45,
+                borderRadius: '50%',
+                backgroundColor: '#3498db',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                marginRight: 15
+              }}>
+                {(activity.authorName || activity.author || '用户').charAt(0)}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: 4, color: '#2c3e50' }}>
+                  {activity.authorName || activity.author}
+                </div>
+                <div style={{ fontSize: '14px', color: '#7f8c8d', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span>{activity.authorClass} • {new Date(activity.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+              {/* 删除按钮 - 只有作者本人或管理员可以删除 */}
+              {(userInfo && (activity.authorName === userInfo.name || isAdmin)) && (
+                <button
+                  onClick={() => handleDelete(activity._id)}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  删除
+                </button>
+              )}
+            </div>
+
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#2c3e50' }}>
               {activity.title}
             </h3>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '12px',
-              fontSize: isMobile ? '14px' : '13px',
-              color: '#7f8c8d'
-            }}>
-              <span>组织者: {activity.authorName || activity.author}</span>
-              <span>班级: {activity.authorClass}</span>
-              <span>时间: {new Date(activity.createdAt).toLocaleString()}</span>
-            </div>
-          </div>
+            
+            <p style={{ margin: '0 0 15px 0', lineHeight: 1.6, color: '#34495e' }}>
+              {activity.description}
+            </p>
 
-          {/* 活动内容 */}
-          <div style={{
-            padding: isMobile ? '15px' : '20px'
-          }}>
-            <div style={{
-              fontSize: isMobile ? '16px' : '14px',
-              lineHeight: '1.6',
-              color: '#2c3e50',
-              marginBottom: activity.media && activity.media.length > 0 ? '15px' : '0'
-            }}>
-              {activity.description || activity.content}
-            </div>
-
-            {/* 媒体文件 */}
             {activity.media && activity.media.length > 0 && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: activity.media.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
-                gap: '10px',
-                marginTop: '15px'
-              }}>
-                {activity.media.map((media, index) => (
-                  <FilePreview
-                    key={index}
-                    file={media}
-                    allowDownload={true}
-                    isMobile={isMobile}
-                  />
-                ))}
+              <div style={{ marginBottom: 15 }}>
+                <FilePreview 
+                  urls={activity.media} 
+                  apiBaseUrl={process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'} 
+                />
               </div>
             )}
-          </div>
 
-          {/* 活动操作 */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: isMobile ? '12px 15px' : '15px 20px',
-            borderTop: '1px solid #f1f3f4',
-            gap: '10px'
-          }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                style={{
-                  padding: isMobile ? '10px 16px' : '8px 16px',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#6c757d',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '14px' : '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  '-webkit-tap-highlight-color': 'transparent',
-                  touchAction: 'manipulation',
-                  minHeight: isMobile ? '44px' : '36px'
-                }}
-              >
-                <span>赞</span>
-                <span>{activity.likes || 0}</span>
-              </button>
-              
-              <button
-                style={{
-                  padding: isMobile ? '10px 16px' : '8px 16px',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#6c757d',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '14px' : '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  '-webkit-tap-highlight-color': 'transparent',
-                  touchAction: 'manipulation',
-                  minHeight: isMobile ? '44px' : '36px'
-                }}
-              >
-                <span>收藏</span>
-                <span>收藏</span>
-              </button>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '15px',
+              padding: '10px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px'
+            }}>
+              <div style={{ fontSize: '14px', color: '#2c3e50' }}>
+                <strong>活动时间：</strong>
+                {new Date(activity.startDate).toLocaleDateString()} - {new Date(activity.endDate).toLocaleDateString()}
+              </div>
             </div>
 
-            {/* 删除按钮（仅作者或管理员可见） */}
-            {(activity.authorName === userInfo?.name || isAdmin) && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '15px',
+              padding: '10px 0',
+              borderTop: '1px solid #ecf0f1'
+            }}>
               <button
-                onClick={async () => {
-                  if (!window.confirm('确定要删除这个活动吗？')) return;
-                  try {
-                    await api.activity.delete(activity._id, userInfo?.name, isAdmin);
-                    setMessage('删除成功');
-                    await loadActivities();
-                  } catch (error) {
-                    console.error('删除失败:', error);
-                    setMessage('删除失败，请重试');
-                  }
-                }}
+                onClick={() => handleLike(activity._id)}
                 style={{
-                  padding: isMobile ? '10px 16px' : '8px 16px',
-                  background: '#f8d7da',
-                  color: '#721c24',
-                  border: '1px solid #f5c6cb',
-                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: likedIds.includes(activity._id) ? '2px solid #e74c3c' : '2px solid #bdc3c7',
+                  background: likedIds.includes(activity._id) ? '#fff5f5' : '#fff',
+                  color: likedIds.includes(activity._id) ? '#e74c3c' : '#7f8c8d',
                   cursor: 'pointer',
-                  fontSize: isMobile ? '14px' : '13px',
-                  '-webkit-tap-highlight-color': 'transparent',
-                  touchAction: 'manipulation',
-                  minHeight: isMobile ? '44px' : '36px'
+                  fontSize: '13px',
+                  fontWeight: '600'
                 }}
               >
-                删除
+                <span>点赞</span>
+                <span>{activity.likes || 0}</span>
               </button>
-            )}
+
+              <button
+                onClick={() => handleFavorite(activity._id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: favoriteIds.includes(activity._id) ? '2px solid #f39c12' : '2px solid #bdc3c7',
+                  background: favoriteIds.includes(activity._id) ? '#fff8e1' : '#fff',
+                  color: favoriteIds.includes(activity._id) ? '#f39c12' : '#7f8c8d',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600'
+                }}
+              >
+                <span>收藏</span>
+                <span>{activity.favorites?.length || 0}</span>
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {activities.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
+            暂无活动，快来创建第一个活动吧！
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 创建活动表单
+function CreateActivityForm({ onBack, userInfo, onSuccess, maintenanceStatus }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    image: '',
+    media: []
+  });
+  const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]); // 保存选择的文件
+
+  // 保存草稿到localStorage
+  const saveDraft = () => {
+    const draft = {
+      title: formData.title,
+      description: formData.description,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      image: formData.image,
+      media: formData.media,
+      selectedFiles: selectedFiles
+    };
+    localStorage.setItem('activity_draft', JSON.stringify(draft));
+  };
+
+  // 从localStorage恢复草稿
+  const loadDraft = () => {
+    const savedDraft = localStorage.getItem('activity_draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setFormData(prev => ({
+          ...prev,
+          title: draft.title || '',
+          description: draft.description || '',
+          startDate: draft.startDate || '',
+          endDate: draft.endDate || '',
+          image: draft.image || '',
+          media: draft.media || []
+        }));
+        setSelectedFiles(draft.selectedFiles || []);
+      } catch (error) {
+        console.error('恢复草稿失败:', error);
+      }
+    }
+  };
+
+  // 清除草稿
+  const clearDraft = () => {
+    localStorage.removeItem('activity_draft');
+    setFormData({
+      title: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+      image: '',
+      media: []
+    });
+    setSelectedFiles([]);
+  };
+
+  // 组件加载时恢复草稿
+  useEffect(() => {
+    loadDraft();
+  }, []);
+
+  // 当表单数据变化时自动保存草稿
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveDraft();
+    }, 1000); // 1秒后保存，避免频繁保存
+
+    return () => clearTimeout(timer);
+  }, [formData, selectedFiles]);
+
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
+
+    // 保存选择的文件
+    setSelectedFiles(Array.from(files));
+
+    setUploading(true);
+    
+    const uploadFormData = new FormData();
+    Array.from(files).forEach(file => uploadFormData.append('files', file));
+
+    try {
+      const data = await api.upload(uploadFormData);
+      if (data && data.urls && data.urls.length > 0) {
+        setFormData(prev => ({ ...prev, media: [...prev.media, ...data.urls] }));
+      }
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      alert('文件上传失败：' + (error.message || '请检查文件大小和格式'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.title || !formData.description || !formData.startDate || !formData.endDate) {
+      alert('请填写所有必要信息！');
+      return;
+    }
+
+    if (!userInfo || !userInfo.name || !userInfo.class) {
+      alert('请先在个人信息页面填写姓名和班级信息！');
+      return;
+    }
+
+    try {
+      await api.activity.create({
+        ...formData,
+        authorName: userInfo.name,
+        authorClass: userInfo.class
+      });
+      
+      alert('活动创建成功！');
+      // 创建成功后清除草稿
+      clearDraft();
+      onSuccess();
+      onBack();
+    } catch (error) {
+      alert('创建失败：' + (error.message || '请重试'));
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 600, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            marginRight: '15px',
+            color: '#7f8c8d'
+          }}
+        >
+          ←
+        </button>
+        <h2 style={{ margin: 0, color: '#2c3e50' }}>创建活动</h2>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+            活动标题 *
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            placeholder="请输入活动标题"
+            style={{ width: '100%', padding: '12px', borderRadius: 8, border: '2px solid #ecf0f1' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+            活动描述 *
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="请描述活动内容..."
+            rows={4}
+            style={{ width: '100%', padding: '12px', borderRadius: 8, border: '2px solid #ecf0f1', resize: 'vertical' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+              开始时间 *
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.startDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+              style={{ width: '100%', padding: '12px', borderRadius: 8, border: '2px solid #ecf0f1' }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+              结束时间 *
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.endDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+              style={{ width: '100%', padding: '12px', borderRadius: 8, border: '2px solid #ecf0f1' }}
+            />
           </div>
         </div>
-      ))}
 
-      {/* 旋转动画样式 */}
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+            上传文件（可选）
+          </label>
+          <input
+            type="file"
+            multiple
+            onChange={handleFileUpload}
+            disabled={uploading}
+            style={{ width: '100%', padding: '10px', borderRadius: 8, border: '2px solid #ecf0f1' }}
+          />
+          {uploading && <div style={{ color: '#3498db', marginTop: 5 }}>上传中...</div>}
+        </div>
+
+        {formData.media.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+              已上传文件预览
+            </label>
+            <div style={{ 
+              border: '1px solid #ecf0f1', 
+              borderRadius: 8, 
+              padding: 15, 
+              background: '#f8f9fa',
+              position: 'relative'
+            }}>
+              <FilePreview 
+                urls={formData.media} 
+                apiBaseUrl={process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'} 
+              />
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 15, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              onClick={saveDraft}
+              style={{
+                padding: '8px 16px',
+                background: '#f39c12',
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 'bold'
+              }}
+            >
+              保存草稿
+            </button>
+            <button
+              type="button"
+              onClick={clearDraft}
+              style={{
+                padding: '8px 16px',
+                background: '#e67e22',
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 'bold'
+              }}
+            >
+              清除草稿
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 15 }}>
+            <button
+              type="button"
+              onClick={onBack}
+              style={{
+                padding: '12px 24px',
+                background: '#95a5a6',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+            style={{
+              padding: '12px 24px',
+              background: '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
+          >
+            创建活动
+          </button>
+        </div>
+        </div>
+      </form>
     </div>
   );
 }
