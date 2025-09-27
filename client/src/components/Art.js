@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import Avatar from './Avatar';
 import FilePreview from './FilePreview';
-import FileUploader from './FileUploader';
 import api from '../api';
 
-export default function Art({ userInfo, isAdmin, maintenanceStatus, onBack }) {
+export default function Art({ userInfo, isAdmin, maintenanceStatus }) {
   const tabs = [
     { key: 'all', label: '全部', dbValue: '' },
     { key: 'music', label: '音乐', dbValue: '音乐' },
@@ -25,63 +25,68 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, onBack }) {
   const [list, setList] = useState([]);
   const [sort, setSort] = useState('time');
   const [showPublish, setShowPublish] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
   const [likedIds, setLikedIds] = useState(() => {
-    const saved = localStorage.getItem('liked_art_ids');
-    return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem('liked_art_ids');
+      return saved ? JSON.parse(saved) : [];
   });
   const [favoriteIds, setFavoriteIds] = useState(() => {
-    const saved = localStorage.getItem('favorite_art_ids');
-    return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem('favorite_art_ids');
+      return saved ? JSON.parse(saved) : [];
   });
   const [showComments, setShowComments] = useState({});
-  const [commentForm, setCommentForm] = useState({ content: '' });
-
-  // 发布作品表单
-  const [publishForm, setPublishForm] = useState({
-    title: '',
-    content: '',
-    tab: 'all',
-    allowDownload: true,
-    media: []
-  });
-
-  // 检测是否为移动设备
-  const isMobile = window.innerWidth <= 768;
+  const [commentForm, setCommentForm] = useState({ author: '', authorClass: '', content: '' });
+  const [message, setMessage] = useState('');
+  const [showCollaboratorModal, setShowCollaboratorModal] = useState(false);
+  const [selectedArt, setSelectedArt] = useState(null);
+  const [collaboratorSearch, setCollaboratorSearch] = useState('');
+  const [collaboratorResults, setCollaboratorResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
-    loadArts();
-  }, [tab, sort]);
-
-  // 加载艺术作品列表
-  const loadArts = async () => {
-    setLoading(true);
-    try {
       const currentTab = tabs.find(t => t.key === tab);
       const dbTab = currentTab ? currentTab.dbValue : '';
-      const sortParam = sort === 'hot' ? 'hot' : 'time';
       
-      const data = await api.art.getAll(dbTab, sortParam);
-      setList(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('加载艺术作品失败:', error);
-      setMessage('加载失败，请重试');
-      setList([]);
-    } finally {
-      setLoading(false);
+    if (tab === 'all') {
+      api.art.getAll('', sort === 'hot' ? 'hot' : '')
+        .then(data => {
+          if (Array.isArray(data)) {
+      setList(data);
+          } else {
+            console.error('API返回的数据不是数组:', data);
+            setList([]);
+          }
+        })
+        .catch(error => {
+          console.error('加载失败:', error);
+          setList([]);
+        });
+    } else {
+      api.art.getAll(dbTab, sort === 'hot' ? 'hot' : '')
+        .then(data => {
+          if (Array.isArray(data)) {
+            setList(data);
+          } else {
+            console.error('API返回的数据不是数组:', data);
+            setList([]);
+          }
+        })
+        .catch(error => {
+          console.error('加载失败:', error);
+          setList([]);
+        });
     }
-  };
+  }, [tab, sort]);
 
   const handleLike = async (id) => {
     if (!userInfo || !userInfo.name) {
       setMessage('请先完善个人信息');
       return;
     }
-    
+
     try {
       const data = await api.art.like(id, userInfo.name);
-      setList(prev => prev.map(item => item._id === id ? data : item));
+      setList(prev => Array.isArray(prev) ? prev.map(item => item._id === id ? data : item) : []);
       
       const isLiked = data.likedUsers && data.likedUsers.includes(userInfo.name);
       let newLiked;
@@ -103,10 +108,10 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, onBack }) {
       setMessage('请先完善个人信息');
       return;
     }
-    
+
     try {
       const data = await api.art.favorite(id, userInfo.name);
-      setList(prev => prev.map(item => item._id === id ? data : item));
+      setList(prev => Array.isArray(prev) ? prev.map(item => item._id === id ? data : item) : []);
       
       const isFavorited = data.favorites && data.favorites.includes(userInfo.name);
       let newFavorites;
@@ -144,6 +149,43 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, onBack }) {
     }
   };
 
+  // 删除评论
+  const handleDeleteComment = async (artId, commentId) => {
+    if (!userInfo || !userInfo.name) {
+      setMessage('请先登录');
+      return;
+    }
+
+    if (!window.confirm('确定要删除这条评论吗？')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://platform-program.onrender.com' : 'http://localhost:5000')}/api/art/${artId}/comment/${commentId}?authorName=${encodeURIComponent(userInfo.name)}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        setList(prev => prev.map(item => {
+          if (item._id === artId) {
+          return {
+              ...item,
+              comments: item.comments.filter(comment => comment.id !== commentId)
+            };
+          }
+          return item;
+        }));
+        setMessage('评论已删除');
+      } else {
+        const data = await res.json();
+        setMessage(data.error || '删除失败');
+      }
+    } catch (error) {
+      console.error('删除评论失败:', error);
+      setMessage('删除失败，请重试');
+    }
+  };
+
   const handleComment = async (id) => {
     if (!commentForm.content.trim()) {
       setMessage('请输入评论内容');
@@ -163,123 +205,231 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, onBack }) {
 
     try {
       const data = await api.art.comment(id, commentData);
-      setList(prev => prev.map(item => item._id === id ? data : item));
-      setCommentForm({ content: '' });
-      setMessage('评论成功');
+      setList(Array.isArray(list) ? list.map(item => item._id === id ? data : item) : []);
+      setCommentForm({ author: '', authorClass: '', content: '' });
     } catch (error) {
-      console.error('评论失败:', error);
-      setMessage('评论失败，请重试');
+      setMessage('评论失败：' + (error.message || '请重试'));
     }
   };
 
-  const handlePublish = async () => {
-    if (!publishForm.title || !publishForm.content) {
-      setMessage('请填写完整信息');
+  const renderMedia = (urls, allowDownload = true) => (
+    <FilePreview 
+      urls={urls} 
+      apiBaseUrl={process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}
+      allowDownload={allowDownload}
+    />
+  );
+
+  // 管理合作用户
+  const handleManageCollaborators = (art) => {
+    setSelectedArt(art);
+    setShowCollaboratorModal(true);
+    setCollaboratorSearch('');
+    setCollaboratorResults([]);
+  };
+
+  // 搜索用户
+  const handleSearchUsers = async () => {
+    if (!collaboratorSearch.trim()) {
+      setMessage('请输入搜索关键词');
       return;
     }
 
-    if (!userInfo || !userInfo.name || !userInfo.class) {
-      setMessage('请先在个人信息页面填写姓名和班级信息');
-      return;
-    }
-
+    setSearchLoading(true);
     try {
-      const artData = {
-        title: publishForm.title,
-        content: publishForm.content,
-        tab: tabs.find(t => t.key === publishForm.tab)?.dbValue || '',
-        authorName: userInfo.name,
-        authorClass: userInfo.class,
-        allowDownload: publishForm.allowDownload,
-        media: publishForm.media || []
-      };
-      
-      const result = await api.art.publish(artData);
-      
-      if (result.success) {
-        setMessage('发布成功');
-        setShowPublish(false);
-        clearDraft();
-        await loadArts();
-      } else {
-        setMessage('发布失败: ' + (result.error || '未知错误'));
+      const data = await api.search.global(collaboratorSearch.trim(), 'user');
+      setCollaboratorResults(data.users || []);
+      if (data.users && data.users.length === 0) {
+        setMessage('未找到相关用户');
       }
     } catch (error) {
-      console.error('发布失败:', error);
-      setMessage('发布失败，请重试');
+      console.error('搜索用户失败:', error);
+      setMessage('搜索失败，请重试');
+    } finally {
+      setSearchLoading(false);
     }
   };
 
-  const clearDraft = () => {
-    setPublishForm({
-      title: '',
-      content: '',
-      tab: 'all',
-      allowDownload: true,
-      media: []
+  // 邀请合作用户
+  const handleInviteCollaborator = async (user) => {
+    if (!selectedArt) return;
+
+    try {
+      await api.art.inviteCollaborator(selectedArt._id, {
+        username: user.name,
+        name: user.name,
+        class: user.class,
+        invitedBy: userInfo.name
+      });
+      setMessage('邀请已发送');
+      // 重新加载作品列表
+      const currentTab = tabs.find(t => t.key === tab);
+      const dbTab = currentTab ? currentTab.dbValue : '';
+      const data = await api.art.getAll(dbTab, sort === 'hot' ? 'hot' : '');
+      setList(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('邀请失败:', error);
+      setMessage('邀请失败：' + (error.message || '请重试'));
+    }
+  };
+
+  // 移除合作用户
+  const handleRemoveCollaborator = async (username) => {
+    if (!selectedArt) return;
+
+    try {
+      await api.art.removeCollaborator(selectedArt._id, username, userInfo.name);
+      setMessage('合作用户已移除');
+      // 重新加载作品列表
+      const currentTab = tabs.find(t => t.key === tab);
+      const dbTab = currentTab ? currentTab.dbValue : '';
+      const data = await api.art.getAll(dbTab, sort === 'hot' ? 'hot' : '');
+      setList(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('移除失败:', error);
+      setMessage('移除失败：' + (error.message || '请重试'));
+    }
+  };
+
+
+
+  // 查看用户详情
+  const handleViewUserProfile = (username, name, userClass) => {
+    const targetUserInfo = {
+      username: username,
+      name: name,
+      class: userClass
+    };
+    
+    // 创建用户详情弹窗
+    const userDetailModal = document.createElement('div');
+    userDetailModal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    `;
+    
+    // 创建弹窗内容
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    `;
+
+    // 创建头像
+    const avatar = document.createElement('div');
+    avatar.style.cssText = `
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 15px;
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+    `;
+    avatar.textContent = name.charAt(0).toUpperCase();
+
+    // 创建用户信息
+    const userInfoDiv = document.createElement('div');
+    userInfoDiv.style.marginBottom = '20px';
+    
+    const nameH3 = document.createElement('h3');
+    nameH3.style.cssText = 'margin: 0 0 10px 0; color: #2c3e50; font-size: 24px;';
+    nameH3.textContent = name;
+    
+    const classP = document.createElement('p');
+    classP.style.cssText = 'margin: 0 0 5px 0; color: #7f8c8d; font-size: 16px;';
+    classP.textContent = `班级: ${userClass}`;
+    
+    const usernameP = document.createElement('p');
+    usernameP.style.cssText = 'margin: 0; color: #7f8c8d; font-size: 14px;';
+    usernameP.textContent = `用户名: ${username}`;
+
+    userInfoDiv.appendChild(avatar);
+    userInfoDiv.appendChild(nameH3);
+    userInfoDiv.appendChild(classP);
+    userInfoDiv.appendChild(usernameP);
+
+    // 创建按钮容器
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: center;';
+
+    // 创建关闭按钮
+    const closeButton = document.createElement('button');
+    closeButton.style.cssText = `
+      padding: 10px 20px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    `;
+    closeButton.textContent = '关闭';
+    closeButton.onclick = () => {
+      document.body.removeChild(userDetailModal);
+    };
+
+    buttonContainer.appendChild(closeButton);
+
+
+    // 组装弹窗内容
+    modalContent.appendChild(userInfoDiv);
+    modalContent.appendChild(buttonContainer);
+    userDetailModal.appendChild(modalContent);
+    
+    document.body.appendChild(userDetailModal);
+    
+    // 点击背景关闭弹窗
+    userDetailModal.addEventListener('click', (e) => {
+      if (e.target === userDetailModal) {
+        document.body.removeChild(userDetailModal);
+      }
     });
   };
 
-  const handleFileUpload = (fileUrl) => {
-    setPublishForm(prev => ({
-      ...prev,
-      media: [...prev.media, { url: fileUrl, filename: fileUrl.split('/').pop() }]
-    }));
-  };
-
-  const removeFile = (index) => {
-    setPublishForm(prev => ({
-      ...prev,
-      media: prev.media.filter((_, i) => i !== index)
-    }));
-  };
-
   if (showPublish) {
-    return <CreateArtForm onBack={() => setShowPublish(false)} userInfo={userInfo} onSuccess={loadArts} maintenanceStatus={maintenanceStatus} />;
-  }
-
-  if (loading) {
-    return (
-      <div style={{ 
-        maxWidth: isMobile ? '100%' : 800, 
-        margin: isMobile ? '20px auto' : '40px auto', 
-        background: '#fff', 
-        borderRadius: 15, 
-        padding: isMobile ? 15 : 30, 
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-      }}>
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <div style={{ fontSize: '18px', color: '#7f8c8d' }}>加载中...</div>
-        </div>
-      </div>
-    );
+    return <PublishForm onBack={() => setShowPublish(false)} userInfo={userInfo} maintenanceStatus={maintenanceStatus} />;
   }
 
   return (
-    <div style={{ 
-      maxWidth: isMobile ? '100%' : 800, 
-      margin: isMobile ? '20px auto' : '40px auto', 
-      background: '#fff', 
-      borderRadius: 15, 
-      padding: isMobile ? 15 : 30, 
-      boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            marginRight: '15px',
-            color: '#7f8c8d'
-          }}
-        >
-          ←
-        </button>
-        <h2 style={{ margin: 0, color: '#2c3e50', flex: 1 }}>艺术作品</h2>
-        <button 
+    <div style={{ maxWidth: 800, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      {/* 消息显示 */}
+      {message && (
+        <div style={{
+          padding: '15px',
+          background: message.includes('成功') ? '#d4edda' : '#f8d7da',
+          color: message.includes('成功') ? '#155724' : '#721c24',
+          borderRadius: 8,
+          border: `1px solid ${message.includes('成功') ? '#c3e6cb' : '#f5c6cb'}`,
+          marginBottom: '20px',
+          textAlign: 'center'
+        }}>
+          {message}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
+        <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '28px' }}>艺术作品展示</h2>
+          <button
           onClick={() => {
             if (maintenanceStatus.isEnabled && !userInfo?.isAdmin) {
               alert(maintenanceStatus.message || '网站正在维护中，暂时无法发布作品');
@@ -288,337 +438,463 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, onBack }) {
             setShowPublish(true);
           }}
           disabled={maintenanceStatus.isEnabled && !userInfo?.isAdmin}
-          style={{ 
-            padding: '10px 20px', 
-            backgroundColor: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? '#95a5a6' : '#27ae60', 
+            style={{
+            padding: '12px 24px', 
+            backgroundColor: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? '#95a5a6' : '#3498db', 
             color: 'white', 
-            border: 'none', 
+              border: 'none',
             borderRadius: 8,
             cursor: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
+            fontSize: '16px',
             fontWeight: 'bold',
+            boxShadow: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? 'none' : '0 2px 8px rgba(52, 152, 219, 0.3)',
+            transition: 'all 0.3s ease',
             opacity: (maintenanceStatus.isEnabled && !userInfo?.isAdmin) ? 0.6 : 1
           }}
+          onMouseEnter={(e) => {
+            if (!(maintenanceStatus.isEnabled && !userInfo?.isAdmin)) {
+              e.target.style.backgroundColor = '#2980b9';
+              e.target.style.transform = 'translateY(-2px)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!(maintenanceStatus.isEnabled && !userInfo?.isAdmin)) {
+              e.target.style.backgroundColor = '#3498db';
+              e.target.style.transform = 'translateY(0)';
+            }
+          }}
         >
-          {maintenanceStatus.isEnabled && !userInfo?.isAdmin ? '+ 维护中' : '+ 发布作品'}
-        </button>
-      </div>
-
-      {/* 消息显示 */}
-      {message && (
-        <div style={{ 
-          marginBottom: 20, 
-          padding: '15px', 
-          background: message.includes('成功') || message.includes('已') ? '#d4edda' : '#f8d7da',
-          color: message.includes('成功') || message.includes('已') ? '#155724' : '#721c24',
-          borderRadius: 8,
-          border: `1px solid ${message.includes('成功') || message.includes('已') ? '#c3e6cb' : '#f5c6cb'}`
-        }}>
-          {message}
+          {maintenanceStatus.isEnabled && !userInfo?.isAdmin ? '维护中' : '发布作品'}
+          </button>
         </div>
-      )}
 
-      {/* 分类标签 */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        marginBottom: 20,
-        gap: 8
-      }}>
-        {tabs.map(t => (
+      <div style={{ display: 'flex', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
+        {tabs.map(tabItem => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabItem.key}
+            onClick={() => setTab(tabItem.key)}
             style={{
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '20px',
+              padding: '10px 20px',
+              borderRadius: 25,
+              border: tab === tabItem.key ? '2px solid #e74c3c' : '2px solid #ecf0f1',
+              background: tab === tabItem.key ? '#e74c3c' : '#fff',
+              color: tab === tabItem.key ? '#fff' : '#2c3e50',
               cursor: 'pointer',
               fontSize: '14px',
-              fontWeight: '500',
-              background: tab === t.key ? '#3498db' : '#f8f9fa',
-              color: tab === t.key ? 'white' : '#6c757d',
-              border: tab === t.key ? 'none' : '1px solid #dee2e6'
+              fontWeight: 'bold',
+              transition: 'all 0.3s ease'
             }}
           >
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
-      </div>
-
-      {/* 排序选项 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        marginBottom: 20,
-        gap: 10
-      }}>
-        <button
-          onClick={() => setSort('time')}
-          style={{
-            padding: '8px 16px',
-            border: 'none',
-            borderRadius: '20px',
+          <button
+            style={{
+            marginLeft: 'auto',
+            padding: '10px 20px',
+            borderRadius: 25,
+            border: sort === 'hot' ? '2px solid #f39c12' : '2px solid #ecf0f1',
+            background: sort === 'hot' ? '#f39c12' : '#fff',
+            color: sort === 'hot' ? '#fff' : '#2c3e50',
             cursor: 'pointer',
             fontSize: '14px',
-            fontWeight: '500',
-            background: sort === 'time' ? '#3498db' : '#f8f9fa',
-            color: sort === 'time' ? 'white' : '#6c757d',
-            border: sort === 'time' ? 'none' : '1px solid #dee2e6'
+            fontWeight: 'bold',
+            transition: 'all 0.3s ease'
           }}
+          onClick={() => setSort(sort === 'hot' ? 'time' : 'hot')}
         >
-          最新
-        </button>
-        <button
-          onClick={() => setSort('hot')}
-          style={{
-            padding: '8px 16px',
-            border: 'none',
-            borderRadius: '20px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            background: sort === 'hot' ? '#3498db' : '#f8f9fa',
-            color: sort === 'hot' ? 'white' : '#6c757d',
-            border: sort === 'hot' ? 'none' : '1px solid #dee2e6'
-          }}
-        >
-          热门
-        </button>
-      </div>
-
-      {/* 作品列表 */}
-      {list.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          color: '#6c757d',
-          fontSize: '16px'
-        }}>
-          暂无作品
+          {sort === 'hot' ? '按时间排序' : '按热度排序'}
+          </button>
         </div>
-      )}
-
+        
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {list.map(art => (
-          <div key={art._id} style={{ 
+        {Array.isArray(list) && list.map(item => (
+          <div key={item._id} data-art-id={item._id} style={{ 
             border: '1px solid #ecf0f1', 
             borderRadius: 12,
             padding: 20,
             background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+            transition: 'all 0.3s ease'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 15 }}>
               <Avatar 
-                name={art.authorName || art.author || '用户'} 
+                name={item.authorName || item.author || '用户'} 
                 size={45}
-                style={{ marginRight: 15 }}
+                style={{ 
+                  marginRight: 15,
+                  border: '3px solid #fff',
+                  boxShadow: '0 3px 10px rgba(0,0,0,0.1)'
+                }}
               />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: 4, color: '#2c3e50' }}>
-                  {art.authorName || art.author}
-                </div>
+                  {item.authorName || item.author}
+        </div>
                 <div style={{ fontSize: '14px', color: '#7f8c8d', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span>{art.authorClass} • {new Date(art.createdAt).toLocaleString()}</span>
-                </div>
-              </div>
-              {/* 删除按钮 - 只有作者本人或管理员可以删除 */}
-              {(userInfo && (art.authorName === userInfo.name || isAdmin)) && (
-                <button
-                  onClick={() => handleDeleteArt(art._id)}
-                  style={{
-                    padding: '6px 12px',
-                    background: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  删除
-                </button>
-              )}
-            </div>
-
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#2c3e50' }}>
-              {art.title}
-            </h3>
-            
-            <p style={{ margin: '0 0 15px 0', lineHeight: 1.6, color: '#34495e' }}>
-              {art.content}
-            </p>
-
-            {/* 媒体文件 */}
-            {art.media && art.media.length > 0 && (
-              <div style={{ marginBottom: 15 }}>
-                {art.media.map((file, index) => (
-                  <div key={index} style={{ marginBottom: '10px' }}>
-                    <FilePreview 
-                      file={file} 
-                      isMobile={isMobile}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '15px',
-              padding: '10px 0',
-              borderTop: '1px solid #ecf0f1'
-            }}>
-              <button
-                onClick={() => handleLike(art._id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: likedIds.includes(art._id) ? '2px solid #e74c3c' : '2px solid #bdc3c7',
-                  background: likedIds.includes(art._id) ? '#fff5f5' : '#fff',
-                  color: likedIds.includes(art._id) ? '#e74c3c' : '#7f8c8d',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
-                点赞 {art.likes || 0}
-              </button>
-              <button
-                onClick={() => handleFavorite(art._id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: favoriteIds.includes(art._id) ? '2px solid #f39c12' : '2px solid #bdc3c7',
-                  background: favoriteIds.includes(art._id) ? '#fff8e1' : '#fff',
-                  color: favoriteIds.includes(art._id) ? '#f39c12' : '#7f8c8d',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
-                收藏
-              </button>
-              <button
-                onClick={() => setShowComments(prev => ({ ...prev, [art._id]: !prev[art._id] }))}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: '2px solid #bdc3c7',
-                  background: '#fff',
-                  color: '#7f8c8d',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
-                评论 ({art.comments ? art.comments.length : 0})
-              </button>
-            </div>
-
-            {/* 评论区域 */}
-            {showComments[art._id] && (
-              <div style={{
-                borderTop: '1px solid #e9ecef',
-                paddingTop: 20,
-                marginTop: 20
-              }}>
-                {/* 评论列表 */}
-                {art.comments && art.comments.length > 0 && (
-                  <div style={{ marginBottom: 20 }}>
-                    {art.comments.map(comment => (
-                      <div key={comment.id} style={{
-                        background: '#f8f9fa',
-                        padding: 15,
-                        borderRadius: 10,
-                        marginBottom: 10
-                      }}>
-                        <div style={{
-                          fontSize: '14px',
-                          color: '#6c757d',
-                          marginBottom: 5
-                        }}>
-                          <strong>{comment.author}</strong> ({comment.authorClass}) - {new Date(comment.createdAt).toLocaleString()}
-                        </div>
-                        <div style={{
-                          fontSize: '16px',
-                          color: '#2c3e50'
-                        }}>
-                          {comment.content}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* 发表评论 */}
-                <div>
-                  <textarea
-                    value={commentForm.content}
-                    onChange={(e) => setCommentForm(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="写下你的评论..."
-                    style={{
-                      width: '100%',
-                      padding: 15,
-                      border: '2px solid #e9ecef',
-                      borderRadius: 10,
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      marginBottom: 15,
-                      minHeight: 100,
-                      resize: 'vertical'
-                    }}
-                  />
-                  <button
-                    onClick={() => handleComment(art._id)}
-                    style={{
-                      padding: '12px 24px',
-                      background: '#27ae60',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}
-                  >
-                    发表评论
-                  </button>
+                  <span>班级: {item.authorClass}</span>
+                  <span>日期: {new Date(item.createdAt).toLocaleString()}</span>
+        </div>
+            {/* 合作用户信息 */}
+                {item.collaborators && item.collaborators.length > 0 && (
+                  <div style={{ marginTop: 8, fontSize: '12px', color: '#7f8c8d' }}>
+                <span style={{ fontWeight: 'bold' }}>合作用户: </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                      {item.collaborators.map((collab, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleViewUserProfile(collab.username, collab.name, collab.class)}
+                      style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            background: '#f8f9fa',
+                        borderRadius: '12px',
+                            border: '1px solid #e9ecef',
+                        cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#e9ecef';
+                            e.target.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = '#f8f9fa';
+                            e.target.style.transform = 'scale(1)';
+                          }}
+                        >
+                          <Avatar 
+                            name={collab.name} 
+                            size={20}
+                            style={{ border: '1px solid #dee2e6' }}
+                          />
+                          <span style={{ fontSize: '11px', fontWeight: '500' }}>{collab.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
           </div>
-        ))}
+            </div>
+            <div style={{ marginBottom: 15 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <h3 style={{ margin: 0, fontSize: '20px', color: '#2c3e50', flex: 1 }}>{item.title}</h3>
+                {/* 管理按钮 - 作者可以管理自己的作品，管理员可以删除任何作品 */}
+                {userInfo && userInfo.name && ((item.authorName === userInfo.name || item.author === userInfo.name) || isAdmin) && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                      onClick={() => handleManageCollaborators(item)}
+                style={{
+                        background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '20px',
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        transition: 'all 0.3s ease',
+                        boxShadow: '0 2px 8px rgba(52, 152, 219, 0.3)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 4px 12px rgba(52, 152, 219, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.boxShadow = '0 2px 8px rgba(52, 152, 219, 0.3)';
+                      }}
+                    >
+                      管理合作
+              </button>
+              <button
+                    onClick={() => handleDeleteArt(item._id)}
+                style={{
+                      background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '8px 16px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)'
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.transform = 'scale(1.05)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.4)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 8px rgba(255, 107, 107, 0.3)';
+                    }}
+                  >
+                    删除作品
+              </button>
+                  </div>
+                )}
+              </div>
+              <p style={{ margin: 0, lineHeight: 1.6, color: '#34495e', fontSize: '15px' }}>{item.content}</p>
+            </div>
+            {renderMedia(item.media, item.allowDownload)}
+            <div style={{ 
+              marginTop: 20, 
+              padding: '15px 0',
+              borderTop: '1px solid #ecf0f1',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleLike(item._id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: likedIds.includes(item._id) ? '2px solid #e74c3c' : '2px solid #bdc3c7',
+                    background: likedIds.includes(item._id) ? '#fff5f5' : '#fff',
+                    color: likedIds.includes(item._id) ? '#e74c3c' : '#7f8c8d',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>
+                    {likedIds.includes(item._id) ? '已喜欢' : '喜欢'}
+                  </span>
+                  <span>{item.likes || 0}</span>
+                </button>
+
+              <button
+                  onClick={() => handleFavorite(item._id)}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: favoriteIds.includes(item._id) ? '2px solid #f39c12' : '2px solid #bdc3c7',
+                    background: favoriteIds.includes(item._id) ? '#fff8e1' : '#fff',
+                    color: favoriteIds.includes(item._id) ? '#f39c12' : '#7f8c8d',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>
+                    {favoriteIds.includes(item._id) ? '已收藏' : '收藏'}
+                  </span>
+                  <span>{item.favorites?.length || 0}</span>
+              </button>
+
+                          <button
+                  onClick={() => setShowComments(prev => ({ ...prev, [item._id]: !prev[item._id] }))}
+                            style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: '2px solid #3498db',
+                    background: '#fff',
+                    color: '#3498db',
+                              cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <span>评论 ({item.comments?.length || 0})</span>
+                          </button>
+
+
+                      </div>
+                    </div>
+
+            {/* 评论区域 */}
+            {showComments[item._id] && (
+                <div style={{
+                marginTop: 15, 
+                  padding: '15px',
+                backgroundColor: '#f8f9fa', 
+                borderRadius: 8,
+                  border: '1px solid #e9ecef'
+                }}>
+                <h4 style={{ margin: '0 0 15px 0', color: '#2c3e50' }}>评论</h4>
+                
+                {/* 评论表单 */}
+                <div style={{ marginBottom: 15, padding: '15px', backgroundColor: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <Avatar 
+                      name={userInfo?.name || '用户'} 
+                      size={32}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2c3e50' }}>
+                        {userInfo?.name || '未登录用户'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6c757d' }}>
+                        {userInfo?.class || '请先完善个人信息'}
+                      </div>
+                    </div>
+                  </div>
+                  <textarea
+                    placeholder="写下您的评论..."
+                    value={commentForm.content}
+                    onChange={(e) => setCommentForm(prev => ({ ...prev, content: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: 6, 
+                      border: '1px solid #ddd',
+                      resize: 'vertical',
+                      fontSize: '14px',
+                      fontFamily: 'inherit'
+                    }}
+                    rows={3}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <button
+                      onClick={() => handleComment(item._id)}
+                    style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#007bff',
+                      color: 'white',
+                      border: 'none',
+                        borderRadius: 6,
+                      cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+                  >
+                    发表评论
+                  </button>
+                </div>
+                </div>
+
+                {/* 评论列表 */}
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {item.comments?.length > 0 ? (
+                    item.comments.map(comment => (
+                      <div key={comment.id} style={{ 
+                        marginBottom: '10px', 
+                        padding: '12px', 
+                        backgroundColor: '#fff', 
+                        borderRadius: 8,
+                        border: '1px solid #e9ecef',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong style={{ fontSize: '13px', color: '#2c3e50' }}>{comment.author}</strong>
+                            <span style={{ fontSize: '11px', color: '#7f8c8d', background: '#f8f9fa', padding: '2px 6px', borderRadius: '10px' }}>
+                              {comment.authorClass}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '11px', color: '#7f8c8d' }}>
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </span>
+                            {/* 删除评论按钮 - 只有评论作者可以删除自己的评论 */}
+                            {userInfo && userInfo.name && comment.author === userInfo.name && (
+                              <button
+                                onClick={() => handleDeleteComment(item._id, comment.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#dc3545',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.target.style.backgroundColor = '#f8d7da';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.target.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                删除
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#34495e', lineHeight: '1.4' }}>
+                          {comment.content}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#7f8c8d', fontSize: '13px', padding: '20px' }}>
+                      暂无评论，快来抢沙发吧！
+                    </div>
+                  )}
+                </div>
+            </div>
+          )}
+        </div>
+      ))}
       </div>
-    </div>
+
+      {/* 图片放大弹窗 */}
+      {selectedImage && (
+        <div 
+          style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setSelectedImage(null)}
+        >
+          <img 
+            src={selectedImage} 
+            alt="" 
+            style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+            </div>
+      )}
+
+      {/* 合作用户管理弹窗 */}
+      <CollaboratorModal
+        show={showCollaboratorModal}
+        onClose={() => setShowCollaboratorModal(false)}
+        art={selectedArt}
+        searchQuery={collaboratorSearch}
+        setSearchQuery={setCollaboratorSearch}
+        searchResults={collaboratorResults}
+        searchLoading={searchLoading}
+        onSearch={handleSearchUsers}
+        onInvite={handleInviteCollaborator}
+        onRemove={handleRemoveCollaborator}
+        message={message}
+                />
+              </div>
   );
 }
 
-// 发布作品表单组件
-function CreateArtForm({ onBack, userInfo, onSuccess, maintenanceStatus }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    tab: 'all',
-    allowDownload: true,
-    media: []
-  });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-
+// 发布表单组件
+function PublishForm({ onBack, userInfo, maintenanceStatus }) {
   const tabs = [
-    { key: 'all', label: '全部', dbValue: '' },
     { key: 'music', label: '音乐', dbValue: '音乐' },
     { key: 'painting', label: '绘画', dbValue: '绘画' },
     { key: 'dance', label: '舞蹈', dbValue: '舞蹈' },
@@ -633,109 +909,202 @@ function CreateArtForm({ onBack, userInfo, onSuccess, maintenanceStatus }) {
     { key: 'digital', label: '数字艺术', dbValue: '数字艺术' }
   ];
 
-  const isMobile = window.innerWidth <= 768;
+  const [formData, setFormData] = useState({
+    tab: '音乐',
+    title: '',
+    content: '',
+    authorName: userInfo?.name || '',
+    authorClass: userInfo?.class || '',
+    media: [],
+    allowDownload: true
+  });
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]); // 保存选择的文件
+
+  // 保存草稿到localStorage
+  const saveDraft = () => {
+    const draft = {
+      tab: formData.tab,
+      title: formData.title,
+      content: formData.content,
+      media: formData.media,
+      allowDownload: formData.allowDownload,
+      selectedFiles: selectedFiles
+    };
+    localStorage.setItem('art_draft', JSON.stringify(draft));
+  };
+
+  // 从localStorage恢复草稿
+  const loadDraft = () => {
+    const savedDraft = localStorage.getItem('art_draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setFormData(prev => ({
+          ...prev,
+          tab: draft.tab || '音乐',
+          title: draft.title || '',
+          content: draft.content || '',
+          media: draft.media || [],
+          allowDownload: draft.allowDownload !== undefined ? draft.allowDownload : true
+        }));
+        setSelectedFiles(draft.selectedFiles || []);
+      } catch (error) {
+        console.error('恢复草稿失败:', error);
+      }
+    }
+  };
+
+  // 清除草稿
+  const clearDraft = () => {
+    localStorage.removeItem('art_draft');
+    setFormData({
+      tab: '音乐',
+      title: '',
+      content: '',
+      authorName: userInfo?.name || '',
+      authorClass: userInfo?.class || '',
+      media: [],
+      allowDownload: true
+    });
+    setSelectedFiles([]);
+  };
+
+  // 组件加载时恢复草稿
+  useEffect(() => {
+    loadDraft();
+  }, []);
+
+  // 当表单数据变化时自动保存草稿
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveDraft();
+    }, 1000); // 1秒后保存，避免频繁保存
+
+    return () => clearTimeout(timer);
+  }, [formData, selectedFiles]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.content) {
-      setMessage('请填写完整信息');
+    // 清除之前的消息
+    setMessage('');
+    
+    if (!formData.title.trim()) {
+      setMessage('请输入作品标题！');
+      return;
+    }
+
+    if (!formData.content.trim()) {
+      setMessage('请输入作品描述！');
       return;
     }
 
     if (!userInfo || !userInfo.name || !userInfo.class) {
-      setMessage('请先在个人信息页面填写姓名和班级信息');
+      setMessage('请先在个人信息页面填写姓名和班级信息！');
       return;
     }
 
-    setLoading(true);
+    // 显示发布中状态
+    setMessage('正在发布作品，请稍候...');
+
     try {
-      const artData = {
-        title: formData.title,
-        content: formData.content,
-        tab: tabs.find(t => t.key === formData.tab)?.dbValue || '',
+      const result = await api.art.create({
+        tab: formData.tab,
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        media: formData.media || [],
         authorName: userInfo.name,
-        authorClass: userInfo.class,
-        allowDownload: formData.allowDownload,
-        media: formData.media || []
-      };
+        authorClass: userInfo.class
+      });
       
-      const result = await api.art.publish(artData);
-      
-      if (result.success) {
-        setMessage('发布成功');
+      if (result) {
+        setMessage('作品发布成功！');
+        // 发布成功后清除草稿
+        clearDraft();
+        // 延迟1秒后返回，让用户看到成功消息
         setTimeout(() => {
-          onSuccess();
           onBack();
         }, 1000);
       } else {
-        setMessage('发布失败: ' + (result.error || '未知错误'));
+        setMessage('发布失败，请重试');
       }
     } catch (error) {
-      console.error('发布失败:', error);
-      setMessage('发布失败，请重试');
-    } finally {
-      setLoading(false);
+      console.error('发布作品失败:', error);
+      setMessage('发布失败：' + (error.message || '网络错误，请检查连接后重试'));
     }
   };
 
-  const handleFileUpload = (fileUrl) => {
-    setFormData(prev => ({
-      ...prev,
-      media: [...prev.media, { url: fileUrl, filename: fileUrl.split('/').pop() }]
-    }));
-  };
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
 
-  const removeFile = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      media: prev.media.filter((_, i) => i !== index)
-    }));
+    // 保存选择的文件
+    setSelectedFiles(Array.from(files));
+
+    // 清除之前的消息
+    setMessage('');
+    setUploading(true);
+    
+    const uploadFormData = new FormData();
+    Array.from(files).forEach(file => uploadFormData.append('files', file));
+
+    try {
+      const data = await api.upload(uploadFormData);
+      if (data && data.urls && data.urls.length > 0) {
+        setFormData(prev => ({ ...prev, media: [...prev.media, ...data.urls] }));
+        setMessage(`成功上传 ${data.urls.length} 个文件`);
+      } else {
+        setMessage('文件上传失败，请重试');
+      }
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      setMessage('文件上传失败：' + (error.message || '请检查文件大小和格式'));
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <div style={{ 
-      maxWidth: isMobile ? '100%' : 800, 
-      margin: isMobile ? '20px auto' : '40px auto', 
-      background: '#fff', 
-      borderRadius: 15, 
-      padding: isMobile ? 15 : 30, 
-      boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            marginRight: '15px',
-            color: '#7f8c8d'
-          }}
-        >
-          ←
-        </button>
-        <h2 style={{ margin: 0, color: '#2c3e50' }}>发布作品</h2>
-      </div>
-
+    <div style={{ maxWidth: 600, margin: '40px auto', background: '#fff', borderRadius: 15, padding: 30, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <h2 style={{ marginBottom: 25, color: '#2c3e50' }}>发布艺术作品</h2>
+      
       {/* 消息显示 */}
       {message && (
         <div style={{ 
-          marginBottom: 20, 
           padding: '15px', 
           background: message.includes('成功') ? '#d4edda' : '#f8d7da',
           color: message.includes('成功') ? '#155724' : '#721c24',
           borderRadius: 8,
-          border: `1px solid ${message.includes('成功') ? '#c3e6cb' : '#f5c6cb'}`
+          border: `1px solid ${message.includes('成功') ? '#c3e6cb' : '#f5c6cb'}`,
+          marginBottom: '20px',
+          textAlign: 'center'
         }}>
           {message}
         </div>
       )}
-
+      
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: '500', color: '#2c3e50' }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+            作品分类 *
+          </label>
+                <select
+            value={formData.tab}
+            onChange={(e) => setFormData(prev => ({ ...prev, tab: e.target.value }))}
+            style={{ width: '100%', padding: '10px', borderRadius: 8, border: '2px solid #ecf0f1' }}
+          >
+            {tabs.map(tabItem => (
+              <option key={tabItem.key} value={tabItem.dbValue}>
+                {tabItem.label}
+              </option>
+                  ))}
+                </select>
+              </div>
+              
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
             作品标题 *
           </label>
           <input
@@ -743,155 +1112,415 @@ function CreateArtForm({ onBack, userInfo, onSuccess, maintenanceStatus }) {
             value={formData.title}
             onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
             placeholder="请输入作品标题"
-            style={{
-              width: '100%',
-              padding: 15,
-              border: '2px solid #e9ecef',
-              borderRadius: 8,
-              fontSize: '14px',
-              boxSizing: 'border-box'
-            }}
-            required
+            style={{ width: '100%', padding: '10px', borderRadius: 8, border: '2px solid #ecf0f1' }}
           />
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: '500', color: '#2c3e50' }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
             作品描述 *
           </label>
-          <textarea
+                <textarea
             value={formData.content}
             onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-            placeholder="请描述您的作品..."
-            style={{
-              width: '100%',
-              padding: 15,
-              border: '2px solid #e9ecef',
-              borderRadius: 8,
-              fontSize: '14px',
-              boxSizing: 'border-box',
-              minHeight: 120,
-              resize: 'vertical'
-            }}
-            required
-          />
-        </div>
-
+                  placeholder="请描述您的作品..."
+                  rows={4}
+            style={{ width: '100%', padding: '10px', borderRadius: 8, border: '2px solid #ecf0f1', resize: 'vertical' }}
+                />
+              </div>
+              
         <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: '500', color: '#2c3e50' }}>
-            作品分类
-          </label>
-          <select
-            value={formData.tab}
-            onChange={(e) => setFormData(prev => ({ ...prev, tab: e.target.value }))}
-            style={{
-              width: '100%',
-              padding: 15,
-              border: '2px solid #e9ecef',
-              borderRadius: 8,
-              fontSize: '14px',
-              boxSizing: 'border-box',
-              backgroundColor: 'white'
-            }}
-          >
-            {tabs.map(t => (
-              <option key={t.key} value={t.key}>{t.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: '500', color: '#2c3e50' }}>
-            上传文件
-          </label>
-          <FileUploader onUpload={handleFileUpload} />
-          
-          {/* 已上传的文件列表 */}
-          {formData.media.length > 0 && (
-            <div style={{ marginTop: 15 }}>
-              <h4 style={{ marginBottom: 10, fontSize: '14px', color: '#2c3e50' }}>已上传文件：</h4>
-              {formData.media.map((file, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: 10,
-                  background: '#f8f9fa',
-                  borderRadius: 8,
-                  marginBottom: 8
-                }}>
-                  <span style={{ fontSize: '14px', color: '#2c3e50' }}>
-                    {file.filename || file.url.split('/').pop()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    style={{
-                      padding: '4px 8px',
-                      background: '#e74c3c',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    删除
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <input
               type="checkbox"
               checked={formData.allowDownload}
               onChange={(e) => setFormData(prev => ({ ...prev, allowDownload: e.target.checked }))}
-              style={{ marginRight: 8 }}
+              style={{ margin: 0 }}
             />
-            <span style={{ fontSize: '14px', color: '#2c3e50' }}>允许下载</span>
+            <span style={{ fontSize: 14, color: '#2c3e50' }}>允许其他用户下载此作品</span>
           </label>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+            取消勾选后，其他用户将无法下载您上传的文件
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 15, justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            onClick={onBack}
+        {/* 用户信息显示 */}
+        {userInfo && userInfo.name && userInfo.class ? (
+          <div style={{ 
+            marginBottom: 20, 
+            padding: '15px', 
+            backgroundColor: '#e8f5e8', 
+            borderRadius: 8,
+            border: '1px solid #c3e6c3'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <Avatar name={userInfo.name} size={40} />
+              <div>
+                <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>{userInfo.name}</div>
+                <div style={{ fontSize: '14px', color: '#7f8c8d' }}>{userInfo.class}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#27ae60' }}>
+              将以此身份发布作品
+            </div>
+          </div>
+        ) : (
+          <div style={{ 
+            marginBottom: 20, 
+            padding: '15px', 
+            backgroundColor: '#fef9e7', 
+            borderRadius: 8,
+            border: '1px solid #f4d03f',
+            textAlign: 'center'
+          }}>
+            <div style={{ color: '#f39c12', fontWeight: 'bold', marginBottom: 5 }}>
+              请先设置个人信息
+            </div>
+            <div style={{ fontSize: '14px', color: '#7f8c8d' }}>
+              请先在个人信息页面填写姓名和班级信息
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+                  上传文件
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+            style={{ width: '100%', padding: '10px', borderRadius: 8, border: '2px solid #ecf0f1' }}
+          />
+          {uploading && <div style={{ color: '#3498db', marginTop: 5 }}>上传中...</div>}
+              </div>
+
+        {formData.media.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold', color: '#2c3e50' }}>
+                    已上传文件预览
+                  </label>
+                  <div style={{ 
+                    border: '1px solid #ecf0f1', 
+              borderRadius: 8, 
+              padding: 15, 
+              background: '#f8f9fa',
+              position: 'relative'
+            }}>
+              <FilePreview 
+                urls={formData.media} 
+                apiBaseUrl={process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'} 
+              />
+              <div style={{ 
+                position: 'absolute', 
+                top: 10, 
+                right: 10, 
+                        display: 'flex', 
+                gap: 5 
+                      }}>
+                        <button
+                          type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, media: [] }))}
+                          style={{
+                    background: '#e74c3c', 
+                            color: 'white',
+                            border: 'none',
+                    borderRadius: 4, 
+                    padding: '5px 10px',
+                    fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                  清空所有
+                        </button>
+                      </div>
+                  </div>
+                </div>
+              )}
+              
+        <div style={{ display: 'flex', gap: 15, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+                <button
+              type="button"
+              onClick={saveDraft}
+                  style={{
+                padding: '8px 16px',
+                background: '#f39c12',
+                    color: 'white',
+                    border: 'none',
+                borderRadius: 6,
+                    cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 'bold'
+                  }}
+                >
+              保存草稿
+                </button>
+                <button
+              type="button"
+              onClick={clearDraft}
+                  style={{
+                padding: '8px 16px',
+                background: '#e67e22',
+                    color: 'white',
+                    border: 'none',
+                borderRadius: 6,
+                    cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 'bold'
+                  }}
+                >
+              清除草稿
+                </button>
+              </div>
+          <div style={{ display: 'flex', gap: 15 }}>
+            <button
+              type="button"
+              onClick={onBack}
+              disabled={uploading}
+              style={{
+                padding: '12px 24px',
+                background: uploading ? '#bdc3c7' : '#95a5a6',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                opacity: uploading ? 0.6 : 1
+              }}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+            disabled={uploading}
             style={{
               padding: '12px 24px',
-              background: '#6c757d',
+              background: uploading ? '#bdc3c7' : '#27ae60',
               color: 'white',
               border: 'none',
               borderRadius: 8,
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              opacity: uploading ? 0.6 : 1,
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (!uploading) {
+                e.target.style.background = '#229954';
+                e.target.style.transform = 'translateY(-1px)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!uploading) {
+                e.target.style.background = '#27ae60';
+                e.target.style.transform = 'translateY(0)';
+              }
             }}
           >
-            取消
+            {uploading ? '上传中...' : '发布作品'}
           </button>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '12px 24px',
-              background: loading ? '#95a5a6' : '#27ae60',
-              color: 'white',
-              border: 'none',
-              borderRadius: 8,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              opacity: loading ? 0.6 : 1
-            }}
-          >
-            {loading ? '发布中...' : '发布'}
-          </button>
-        </div>
+            </div>
+          </div>
       </form>
+        </div>
+  );
+}
+
+// 合作用户管理弹窗组件
+function CollaboratorModal({ 
+  show, 
+  onClose, 
+  art, 
+  searchQuery, 
+  setSearchQuery, 
+  searchResults, 
+  searchLoading, 
+  onSearch, 
+  onInvite, 
+  onRemove, 
+  message 
+}) {
+  if (!show || !art) return null;
+
+  return (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+      background: 'rgba(0,0,0,0.8)',
+      zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+      justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+        background: '#fff',
+        borderRadius: 15,
+        padding: 30,
+        maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ margin: 0, color: '#2c3e50' }}>管理合作用户 - {art.title}</h3>
+              <button
+            onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+              color: '#7f8c8d'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+        {/* 消息显示 */}
+        {message && (
+              <div style={{
+            marginBottom: 20, 
+            padding: '10px 15px', 
+            backgroundColor: message.includes('成功') ? '#d4edda' : '#f8d7da',
+            color: message.includes('成功') ? '#155724' : '#721c24',
+            borderRadius: 6,
+            border: `1px solid ${message.includes('成功') ? '#c3e6cb' : '#f5c6cb'}`
+          }}>
+            {message}
+                </div>
+        )}
+
+              {/* 当前合作用户 */}
+        <div style={{ marginBottom: 30 }}>
+          <h4 style={{ marginBottom: 15, color: '#2c3e50' }}>当前合作用户</h4>
+          {art.collaborators && art.collaborators.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {art.collaborators.map((collab, index) => (
+                      <div key={index} style={{
+                  border: '1px solid #ecf0f1',
+                  borderRadius: 8,
+                  padding: 15,
+                  background: '#f8f9fa',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                  alignItems: 'center'
+                      }}>
+                        <div>
+                    <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>{collab.name}</div>
+                    <div style={{ fontSize: '12px', color: '#7f8c8d' }}>
+                      班级: {collab.class} • 加入时间: {new Date(collab.joinedAt).toLocaleString()}
+                          </div>
+                        </div>
+                        <button
+                    onClick={() => onRemove(collab.username)}
+                          style={{
+                      padding: '6px 12px',
+                      background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                      borderRadius: 4,
+                            cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                          }}
+                        >
+                          移除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#7f8c8d' }}>
+              暂无合作用户
+                </div>
+              )}
+        </div>
+
+        {/* 搜索和邀请新用户 */}
+              <div>
+          <h4 style={{ marginBottom: 15, color: '#2c3e50' }}>邀请新合作用户</h4>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: 20 }}>
+                  <input
+                    type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => { if (e.key === 'Enter') onSearch(); }}
+              placeholder="搜索用户姓名或班级..."
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                borderRadius: 6, 
+                fontSize: '14px' 
+                    }}
+                  />
+                  <button
+              onClick={onSearch}
+                    disabled={searchLoading}
+                    style={{
+                padding: '10px 20px',
+                background: searchLoading ? '#6c757d' : '#007bff',
+                      color: 'white',
+                      border: 'none',
+                borderRadius: 6,
+                cursor: searchLoading ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+                    }}
+                  >
+                    {searchLoading ? '搜索中...' : '搜索'}
+                  </button>
+                </div>
+
+                {/* 搜索结果 */}
+          {searchResults.length > 0 && (
+                  <div>
+              <h5 style={{ marginBottom: 10, color: '#2c3e50' }}>搜索结果</h5>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {searchResults.map(user => (
+                  <div key={user._id || user.name} style={{
+                    border: '1px solid #ecf0f1',
+                    borderRadius: 6,
+                    padding: 12,
+                    background: '#f8f9fa',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                    alignItems: 'center'
+                        }}>
+                          <div>
+                      <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>{user.name}</div>
+                      <div style={{ fontSize: '12px', color: '#7f8c8d' }}>班级: {user.class}</div>
+                          </div>
+                          <button
+                      onClick={() => onInvite(user)}
+                            style={{
+                        padding: '6px 12px',
+                        background: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                        borderRadius: 4,
+                              cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                            }}
+                          >
+                            邀请
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
     </div>
   );
 }
