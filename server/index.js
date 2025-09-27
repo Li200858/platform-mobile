@@ -28,10 +28,11 @@ const deleteFile = (filePath) => {
     const fileName = path.basename(filePath);
     console.log('提取的文件名:', fileName);
     
-    // 根据环境确定正确的上传目录
+    // 根据环境确定正确的上传目录 - 共享原版网站磁盘
     let uploadDir;
     if (process.env.NODE_ENV === 'production') {
-      uploadDir = '/opt/render/project/src/uploads';
+      // 使用原版网站的磁盘路径，确保文件共享
+      uploadDir = process.env.SHARED_UPLOAD_DIR || '/opt/render/project/src/uploads';
     } else {
       uploadDir = path.join(__dirname, 'uploads');
     }
@@ -89,7 +90,7 @@ const cleanupOrphanedFiles = async () => {
   try {
     console.log('开始清理孤立文件...');
     const uploadsDir = process.env.NODE_ENV === 'production' ? 
-      '/opt/render/project/src/uploads' : 
+      (process.env.SHARED_UPLOAD_DIR || '/opt/render/project/src/uploads') : 
       path.join(__dirname, 'uploads');
     
     if (!fs.existsSync(uploadsDir)) {
@@ -241,7 +242,8 @@ app.use((req, res, next) => {
   }
 });
 // 配置静态文件服务 - 支持持久化存储
-const uploadsDir = process.env.NODE_ENV === 'production' ? '/opt/render/project/src/uploads' : 'uploads';
+const uploadsDir = process.env.NODE_ENV === 'production' ? 
+  (process.env.SHARED_UPLOAD_DIR || '/opt/render/project/src/uploads') : 'uploads';
 console.log('静态文件服务目录:', uploadsDir);
 console.log('目录是否存在:', fs.existsSync(uploadsDir));
 if (fs.existsSync(uploadsDir)) {
@@ -258,7 +260,8 @@ if (!fs.existsSync(uploadsDir)) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // 在Render上使用持久化存储目录
-    const uploadDir = process.env.NODE_ENV === 'production' ? '/opt/render/project/src/uploads' : 'uploads';
+    const uploadDir = process.env.NODE_ENV === 'production' ? 
+      (process.env.SHARED_UPLOAD_DIR || '/opt/render/project/src/uploads') : 'uploads';
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
