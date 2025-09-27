@@ -311,7 +311,7 @@ app.post('/api/art', async (req, res) => {
   
   try {
     const post = await Art.create({
-      tab,
+      tab: tab || '全部',
       title,
       content,
       author: authorName,
