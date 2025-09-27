@@ -176,12 +176,17 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
   };
 
   const handleDeleteResource = async (resourceId) => {
+    if (!userInfo?.name) {
+      setMessage('请先登录');
+      return;
+    }
+
     if (!window.confirm('确定要删除这个资料吗？')) {
       return;
     }
 
     try {
-      await api.resources.delete(resourceId);
+      await api.resources.delete(resourceId, userInfo.name, isAdmin || false);
       setMessage('资料删除成功！');
       loadResources();
     } catch (error) {
