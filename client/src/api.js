@@ -130,6 +130,10 @@ const api = {
       const response = await fetch(`${API_BASE_URL}/art/favorites?authorName=${encodeURIComponent(authorName)}`);
       return response.json();
     },
+    getMyFavorites: async (authorName) => {
+      const response = await fetch(`${API_BASE_URL}/art/favorites?authorName=${encodeURIComponent(authorName)}`);
+      return response.json();
+    },
     getLikes: async (authorName) => {
       const response = await fetch(`${API_BASE_URL}/art/likes?authorName=${encodeURIComponent(authorName)}`);
       return response.json();
@@ -444,6 +448,9 @@ const api = {
         method: 'POST',
         body: formData
       });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       return response.json();
     },
     delete: async (id, authorName, isAdmin) => {
@@ -457,7 +464,7 @@ const api = {
       return response.json();
     },
     openFile: (filename) => {
-      return `${API_BASE_URL}/resources/file/${encodeURIComponent(filename)}`;
+      return `${API_BASE_URL.replace('/api', '')}/uploads/${encodeURIComponent(filename)}`;
     }
   },
 
@@ -467,6 +474,96 @@ const api = {
       const response = await fetch(`${API_BASE_URL}/disk-usage`);
       return response.json();
     }
+  },
+
+  // Portfolio related APIs
+  portfolio: {
+    create: async (portfolioData) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(portfolioData)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+    getAll: async () => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/public`);
+      return response.json();
+    },
+    getByUser: async (username) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/user/${encodeURIComponent(username)}`);
+      return response.json();
+    },
+    getById: async (id) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${id}`);
+      return response.json();
+    },
+    update: async (id, data) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return response.json();
+    },
+    delete: async (id, authorName, isAdmin) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${id}?authorName=${encodeURIComponent(authorName)}&isAdmin=${isAdmin}`, {
+        method: 'DELETE'
+      });
+      return response.json();
+    },
+    addWork: async (portfolioId, workId) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${portfolioId}/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workId })
+      });
+      return response.json();
+    },
+    removeWork: async (portfolioId, workId) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/${portfolioId}/works/${workId}`, {
+        method: 'DELETE'
+      });
+      return response.json();
+    },
+    uploadContent: async (formData) => {
+      const response = await fetch(`${API_BASE_URL}/portfolio/upload-content`, {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
+  },
+
+  // Search functionality
+  search: {
+    global: async (query, type = 'all', limit = 20) => {
+      const params = new URLSearchParams({
+        q: query,
+        type: type,
+        limit: limit.toString()
+      });
+      const response = await fetch(`${API_BASE_URL}/search?${params}`);
+      return response.json();
+    }
+  },
+
+  // File upload (general)
+  upload: async (formData) => {
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
   }
 };
 

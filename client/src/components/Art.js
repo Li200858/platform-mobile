@@ -55,9 +55,10 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
     content: '',
     tab: 'all',
     allowDownload: true,
-    files: []
+    media: []
   });
   const [selectedFiles, setSelectedFiles] = useState([]); // 保存选择的文件
+  const [uploading, setUploading] = useState(false); // 上传状态
 
   // 移动端优化的样式
   const mobileStyles = {
@@ -309,6 +310,37 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
 
   // 删除作品（别名，保持与原版一致）
   const handleDeleteArt = handleDelete;
+
+  // 文件上传处理
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
+
+    // 保存选择的文件
+    setSelectedFiles(Array.from(files));
+
+    // 清除之前的消息
+    setMessage('');
+    setUploading(true);
+    
+    const uploadFormData = new FormData();
+    Array.from(files).forEach(file => uploadFormData.append('files', file));
+
+    try {
+      const data = await api.upload(uploadFormData);
+      if (data && data.urls && data.urls.length > 0) {
+        setPublishForm(prev => ({ ...prev, media: [...(prev.media || []), ...data.urls] }));
+        setMessage(`成功上传 ${data.urls.length} 个文件`);
+      } else {
+        setMessage('文件上传失败，请重试');
+      }
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      setMessage('文件上传失败：' + (error.message || '请检查文件大小和格式'));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // 删除评论
   const handleDeleteComment = async (artId, commentId) => {
@@ -1002,6 +1034,77 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                 />
               </div>
               
+              {/* 文件上传 */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  上传文件
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {uploading && <div style={{ color: '#3498db', marginTop: '5px' }}>上传中...</div>}
+              </div>
+
+              {/* 已上传文件预览 */}
+              {publishForm.media && publishForm.media.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                    已上传文件预览
+                  </label>
+                  <div style={{ 
+                    border: '1px solid #ecf0f1', 
+                    borderRadius: '8px', 
+                    padding: '15px', 
+                    background: '#f8f9fa'
+                  }}>
+                    {publishForm.media.map((file, index) => (
+                      <div key={index} style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        padding: '5px 0',
+                        borderBottom: index < publishForm.media.length - 1 ? '1px solid #dee2e6' : 'none'
+                      }}>
+                        <span style={{ fontSize: isMobile ? '14px' : '12px' }}>
+                          {file.split('/').pop()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPublishForm(prev => ({
+                              ...prev,
+                              media: prev.media.filter((_, i) => i !== index)
+                            }));
+                          }}
+                          style={{
+                            background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: isMobile ? '12px' : '10px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          删除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input
@@ -1043,7 +1146,8 @@ export default function Art({ userInfo, isAdmin, maintenanceStatus, isMobile = f
                         tab: tabs.find(t => t.key === publishForm.tab)?.dbValue || '',
                         authorName: userInfo.name,
                         authorClass: userInfo.class,
-                        allowDownload: publishForm.allowDownload
+                        allowDownload: publishForm.allowDownload,
+                        media: publishForm.media || []
                       };
                       
                       await api.art.publish(artData);
