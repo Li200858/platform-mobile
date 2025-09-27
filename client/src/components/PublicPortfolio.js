@@ -16,7 +16,7 @@ export default function PublicPortfolio({ userInfo, onBack }) {
     try {
       setLoading(true);
       const data = await api.portfolio.getPublicPortfolios();
-      setPortfolios(data);
+      setPortfolios(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('加载公开作品集失败:', error);
       setMessage('加载公开作品集失败');

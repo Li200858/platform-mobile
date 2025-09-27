@@ -106,6 +106,8 @@ export default function Portfolio({ userInfo, isAdmin, onBack }) {
   }, [userInfo]);
 
   const loadPortfolios = async () => {
+    if (!userInfo?.name) return;
+    
     try {
       setLoading(true);
       const data = await api.portfolio.getUserPortfolios(userInfo.name);
@@ -113,6 +115,7 @@ export default function Portfolio({ userInfo, isAdmin, onBack }) {
     } catch (error) {
       console.error('加载作品集失败:', error);
       setPortfolios([]);
+      setMessage('加载失败，请重试');
     } finally {
       setLoading(false);
     }

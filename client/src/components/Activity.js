@@ -5,6 +5,7 @@ import api from '../api';
 export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus }) {
   const [activities, setActivities] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [likedIds, setLikedIds] = useState(() => {
     const saved = localStorage.getItem('liked_activity_ids');
@@ -20,12 +21,16 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus 
   }, []);
 
   const loadActivities = async () => {
+    setLoading(true);
     try {
       const data = await api.activity.getAll();
       setActivities(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('加载活动失败:', error);
       setActivities([]);
+      setMessage('加载失败，请重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,6 +111,23 @@ export default function Activity({ userInfo, isAdmin, onBack, maintenanceStatus 
 
   // 检测是否为移动设备
   const isMobile = window.innerWidth <= 768;
+
+  if (loading) {
+    return (
+      <div style={{ 
+        maxWidth: isMobile ? '100%' : 800, 
+        margin: isMobile ? '20px auto' : '40px auto', 
+        background: '#fff', 
+        borderRadius: 15, 
+        padding: isMobile ? 15 : 30, 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+      }}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ fontSize: '18px', color: '#7f8c8d' }}>加载中...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ 

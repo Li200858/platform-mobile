@@ -92,6 +92,7 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
     } catch (error) {
       console.error('加载资料失败:', error);
       setResources([]);
+      setMessage('加载资料失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -104,6 +105,7 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
     } catch (error) {
       console.error('加载分类失败:', error);
       setCategories([]);
+      setMessage('加载分类失败，请重试');
     }
   };
 
