@@ -539,10 +539,11 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
                 }}
               >
                 <option value="template">模板</option>
-                <option value="guide">指南</option>
-                <option value="reference">参考资料</option>
-                <option value="tool">工具</option>
-                <option value="other">其他</option>
+                <option value="tutorial">教程</option>
+                <option value="document">文档</option>
+                <option value="image">图片</option>
+                <option value="video">视频</option>
+                <option value="audio">音频</option>
               </select>
             </div>
 
