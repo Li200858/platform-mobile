@@ -446,9 +446,33 @@ const api = {
         throw error;
       }
     },
+    getPortfolio: async (id) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/portfolio/${id}`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载作品集详情失败:', error);
+        throw error;
+      }
+    },
     getPortfolioDetail: async (id) => {
-      const response = await fetch(`${API_BASE_URL}/portfolio/${id}`);
-      return response.json();
+      try {
+        const response = await fetch(`${API_BASE_URL}/portfolio/${id}`, {
+          timeout: 10000 // 10秒超时
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('加载作品集详情失败:', error);
+        throw error;
+      }
     },
     update: async (id, updateData) => {
       const response = await fetch(`${API_BASE_URL}/portfolio/${id}`, {
