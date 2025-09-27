@@ -36,13 +36,21 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
-        setNewResource(draft.newResource || {
-          title: '',
-          description: '',
-          category: 'template',
-          tags: [],
-          files: [],
-          isPublic: true
+        const validCategories = ['template', 'tutorial', 'document', 'image', 'video', 'audio'];
+        const savedResource = draft.newResource || {};
+        
+        // 验证并修正category
+        if (!validCategories.includes(savedResource.category)) {
+          savedResource.category = 'template';
+        }
+        
+        setNewResource({
+          title: savedResource.title || '',
+          description: savedResource.description || '',
+          category: savedResource.category || 'template',
+          tags: savedResource.tags || [],
+          files: savedResource.files || [],
+          isPublic: savedResource.isPublic !== false
         });
         setSelectedFiles(draft.selectedFiles || []);
       } catch (error) {
