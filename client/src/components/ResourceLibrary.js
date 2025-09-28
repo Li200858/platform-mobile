@@ -197,12 +197,8 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
 
   const handleOpenFile = async (file) => {
     try {
-      const apiBaseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://platform-mobile-backend.onrender.com' 
-        : 'http://localhost:5000';
-      
-      // 使用静态文件服务，与其他模块保持一致
-      const fileUrl = `${apiBaseUrl}/uploads/${file.filename}`;
+      // 直接使用file.url，与Portfolio模块保持一致
+      const fileUrl = file.url;
       
       // 在新窗口中打开文件
       window.open(fileUrl, '_blank');
