@@ -2143,7 +2143,7 @@ app.post('/api/resources/upload', upload.array('files'), async (req, res) => {
       type: file.mimetype,
       size: file.size,
       path: file.path,
-      url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}/api/resources/file/${file.filename}`
+      url: `${process.env.NODE_ENV === 'production' ? 'https://platform-mobile-backend.onrender.com' : 'http://localhost:5000'}/uploads/${file.filename}`
     }));
 
     console.log('处理文件信息:', files);
