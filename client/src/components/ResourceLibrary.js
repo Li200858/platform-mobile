@@ -201,7 +201,8 @@ export default function ResourceLibrary({ userInfo, isAdmin, onBack }) {
         ? 'https://platform-mobile-backend.onrender.com' 
         : 'http://localhost:5000';
       
-      const fileUrl = `${apiBaseUrl}/uploads/${file.filename}`;
+      // 使用API路由而不是静态文件服务，确保正确访问磁盘文件
+      const fileUrl = `${apiBaseUrl}/api/resources/file/${file.filename}`;
       
       // 在新窗口中打开文件
       window.open(fileUrl, '_blank');
